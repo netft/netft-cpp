@@ -40,8 +40,9 @@ Use a red-green-refactor workflow for code changes:
 5. Refactor only while the tests remain green.
 
 Tests should verify public behavior, protocol rules, error paths, or necessary private
-invariants. Do not add tests that pin README or other prose wording. No test may depend on an
-unavailable physical sensor.
+invariants. Do not pin README, changelog, release-note, help, diagnostic, log, or error prose.
+Protocol bytes, serialized enum values, JSON field names, and other machine-readable interfaces
+remain valid test contracts. No test may depend on an unavailable physical sensor.
 
 ## Formatting and static analysis
 

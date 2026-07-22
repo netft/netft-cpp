@@ -10,7 +10,7 @@
 namespace netft {
 
 struct DiscoveryOptions {
-  std::string sensor_host{"192.168.31.100"};
+  std::string sensor_host{"192.168.1.1"};
   int http_port{80};
   std::chrono::duration<double> connect_timeout{0.5};
   std::chrono::duration<double> total_timeout{1.0};

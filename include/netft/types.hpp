@@ -51,7 +51,7 @@ struct SensorConfiguration {
 };
 
 struct Config {
-  std::string sensor_host{"192.168.31.100"};
+  std::string sensor_host{"192.168.1.1"};
   int rdt_port{49152};
   int http_port{80};
   std::chrono::duration<double> receive_timeout{0.1};

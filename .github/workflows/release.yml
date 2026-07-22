@@ -63,11 +63,40 @@ jobs:
           git archive --format=tar.gz --prefix="netft-cpp-${VERSION}/" \
             --output="dist/${archive}" "$GITHUB_SHA"
           (cd dist && sha256sum "${archive}" > "${archive}.sha256")
-          awk -v version="$VERSION" '
-            index($0, "## " version " - ") == 1 { found = 1; next }
-            found && /^## / { exit }
-            found { print }
-          ' CHANGELOG.md > dist/release-notes.md
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          version = os.environ["VERSION"]
+          changelog = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          section = re.search(
+              rf"(?ms)^## {re.escape(version)} - [^\n]+\n(?P<body>.*?)(?=^## |\Z)",
+              changelog,
+          )
+          if section is None:
+              raise SystemExit("release notes are missing")
+
+          rendered = []
+          current_bullet = None
+          for raw_line in section.group("body").splitlines():
+              if raw_line.startswith("- "):
+                  if current_bullet is not None:
+                      rendered.append(current_bullet)
+                  current_bullet = raw_line
+              elif current_bullet is not None and raw_line.startswith("  "):
+                  current_bullet += " " + raw_line.strip()
+              else:
+                  if current_bullet is not None:
+                      rendered.append(current_bullet)
+                      current_bullet = None
+                  rendered.append(raw_line.rstrip())
+          if current_bullet is not None:
+              rendered.append(current_bullet)
+
+          notes = "\n".join(rendered).strip() + "\n"
+          pathlib.Path("dist/release-notes.md").write_text(notes, encoding="utf-8")
+          PY
           if [[ ! -s dist/release-notes.md ]]; then
             echo "release notes are empty" >&2
             exit 1

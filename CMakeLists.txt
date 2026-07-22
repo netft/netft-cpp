@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(netft VERSION 0.1.0 LANGUAGES CXX)
+project(netft VERSION 0.1.1 LANGUAGES CXX)
 
 include(CTest)
 include(GNUInstallDirs)
@@ -41,7 +41,7 @@ add_library(netft::netft ALIAS netft)
 target_compile_definitions(netft PRIVATE NETFT_BUILDING_LIBRARY)
 
 set_target_properties(netft PROPERTIES
-  VERSION 0.1.0
+  VERSION "${PROJECT_VERSION}"
   SOVERSION 0
   CXX_VISIBILITY_PRESET hidden
   VISIBILITY_INLINES_HIDDEN YES

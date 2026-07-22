@@ -67,7 +67,7 @@ location. A minimal streaming program is:
 
 int main() {
   netft::Config config;
-  config.sensor_host = "192.168.31.100";
+  config.sensor_host = "192.168.1.1";
 
   netft::Client client{config};
   client.start([](const netft::Sample &sample) {
@@ -79,8 +79,7 @@ int main() {
 }
 ```
 
-`192.168.31.100` is a real sensor address used by this project, but it is not a universal Net
-F/T address. Replace it with the address configured for your sensor.
+`192.168.1.1` is the ATI [factory-default sensor address](https://www.ati-ia.com/app_content/Documents/9620-05-Net%20FT.pdf). Replace it with the address configured for your sensor when it has been moved to another network.
 
 ## CLI usage
 
@@ -88,10 +87,10 @@ The installed `netft` executable provides three commands:
 
 ```bash
 netft --help
-netft info --host 192.168.31.100
-netft monitor --host 192.168.31.100 --duration 10
-netft monitor --host 192.168.31.100 --duration 10 --json --output sample.json
-netft bias --host 192.168.31.100
+netft info --host 192.168.1.1
+netft monitor --host 192.168.1.1 --duration 10
+netft monitor --host 192.168.1.1 --duration 10 --json --output sample.json
+netft bias --host 192.168.1.1
 ```
 
 `info` reads and prints sensor configuration without starting an RDT stream. `monitor` keeps
@@ -126,7 +125,7 @@ calibration is known. All four values are required together: counts per force un
 torque unit, force unit, and torque unit. Partial overrides are rejected.
 
 ```bash
-netft monitor --host 192.168.31.100 --duration 5 \
+netft monitor --host 192.168.1.1 --duration 5 \
   --counts-per-force-unit 1000000 \
   --counts-per-torque-unit 1000 \
   --force-unit N \
@@ -189,7 +188,7 @@ stream without printing individual samples. It requires an explicit sensor host 
 assume a particular unit system or calibration scale:
 
 ```bash
-NETFT_SENSOR_HOST=192.168.31.100 pixi run hardware-test
+NETFT_SENSOR_HOST=192.168.1.1 pixi run hardware-test
 ```
 
 The default `hardware-test` task explicitly forces `NETFT_ALLOW_BIAS=0`, so an inherited shell
@@ -202,7 +201,7 @@ unload or fixture it as required, stop hazardous motion, and keep people clear. 
 those checks may an operator deliberately run:
 
 ```bash
-NETFT_SENSOR_HOST=192.168.31.100 pixi run hardware-bias-test
+NETFT_SENSOR_HOST=192.168.1.1 pixi run hardware-bias-test
 ```
 
 Authorization from an earlier run must not be reused. The bias task opts in by setting

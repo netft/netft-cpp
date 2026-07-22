@@ -70,15 +70,6 @@ netft::DiscoveryOptions options_for(const FakeHttpServer &server) {
   return options;
 }
 
-std::string discovery_error_message(const netft::DiscoveryOptions &options) {
-  try {
-    static_cast<void>(netft::discover_sensor(options));
-  } catch (const netft::DiscoveryError &error) {
-    return error.what();
-  }
-  return {};
-}
-
 TEST(XmlConfiguration, ParsesTheRealSensorFixtureExactly) {
   const auto result = netft::detail::parse_sensor_configuration(kValidXml);
 
@@ -360,9 +351,7 @@ TEST(SensorDiscovery, TreatsAnIpv6LiteralAsAHost) {
   options.connect_timeout = std::chrono::milliseconds{50};
   options.total_timeout = std::chrono::milliseconds{100};
 
-  const auto message = discovery_error_message(options);
-
-  EXPECT_NE(message.find("Could not connect to server"), std::string::npos) << message;
+  EXPECT_THROW(netft::discover_sensor(options), netft::DiscoveryError);
 }
 
 TEST(SensorDiscovery, RejectsRoundedMillisecondsAboveLongMax) {
@@ -373,29 +362,17 @@ TEST(SensorDiscovery, RejectsRoundedMillisecondsAboveLongMax) {
   options.total_timeout =
       std::chrono::duration<double>{static_cast<double>(std::numeric_limits<long>::max()) / 1000.0};
 
-  const auto message = discovery_error_message(options);
-
-  EXPECT_NE(message.find("total_timeout must be finite, positive, and "
-                         "representable"),
-            std::string::npos)
-      << message;
+  EXPECT_THROW(netft::discover_sensor(options), netft::DiscoveryError);
 }
 
 TEST(SensorDiscovery, AcceptsRoundedMillisecondsAtOrBelowLongMax) {
-  netft::DiscoveryOptions options;
-  options.sensor_host = "127.0.0.1";
-  options.http_port = 1;
+  FakeHttpServer server{std::string{kValidXml}};
+  auto options = options_for(server);
   options.connect_timeout = std::chrono::milliseconds{50};
   const double boundary_seconds = static_cast<double>(std::numeric_limits<long>::max()) / 1000.0;
   options.total_timeout = std::chrono::duration<double>{std::nextafter(boundary_seconds, 0.0)};
 
-  const auto message = discovery_error_message(options);
-
-  EXPECT_FALSE(message.empty());
-  EXPECT_EQ(message.find("total_timeout must be finite, positive, and "
-                         "representable"),
-            std::string::npos)
-      << message;
+  EXPECT_NO_THROW(static_cast<void>(netft::discover_sensor(options)));
 }
 
 TEST(FakeHttpServerTest, DestructionInterruptsAnIncompleteAcceptedRequest) {

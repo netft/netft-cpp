@@ -9,7 +9,7 @@
 
 TEST(Config, DefaultsToAutomaticSensorDiscovery) {
   const netft::Config config;
-  EXPECT_EQ(config.sensor_host, "192.168.31.100");
+  EXPECT_EQ(config.sensor_host, "192.168.1.1");
   EXPECT_EQ(config.rdt_port, 49152);
   EXPECT_EQ(config.http_port, 80);
   EXPECT_FALSE(config.calibration_override.has_value());
