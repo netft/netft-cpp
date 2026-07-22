@@ -1,0 +1,18 @@
+Checks: >
+  -*,
+  bugprone-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  modernize-*,
+  -bugprone-easily-swappable-parameters,
+  -performance-enum-size,
+  -portability-avoid-pragma-once,
+  -readability-identifier-length,
+  -readability-identifier-naming,
+  -readability-magic-numbers,
+  -modernize-use-trailing-return-type
+WarningsAsErrors: '*'
+HeaderFilterRegex: '^(.*\/)?(include|src|app)\/.*'
+CheckOptions:
+  readability-function-cognitive-complexity.Threshold: '60'

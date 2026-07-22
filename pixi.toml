@@ -1,0 +1,32 @@
+[workspace]
+name = "netft-cpp"
+version = "0.1.0"
+channels = ["conda-forge"]
+platforms = ["linux-64", "linux-aarch64"]
+
+[dependencies]
+cmake = "*"
+ninja = "*"
+cxx-compiler = "*"
+gtest = "*"
+libcurl = "*"
+clang = "*"
+clangxx = "*"
+clang-tools = "*"
+lcov = "*"
+gcovr = "*"
+python = "*"
+
+[tasks]
+configure = "cmake -S . -B build -G Ninja -DBUILD_TESTING=ON"
+build = { cmd = "cmake --build build", depends-on = ["configure"] }
+test = { cmd = "ctest --test-dir build --output-on-failure", depends-on = ["build"] }
+install-test = "bash test/install_test.sh"
+shared-test = "bash test/install_test.sh shared"
+static-test = "bash test/install_test.sh static"
+hardware-test = "NETFT_ALLOW_BIAS=0 bash test/hardware_test.sh"
+hardware-bias-test = "NETFT_ALLOW_BIAS=1 bash test/hardware_test.sh"
+format = "git ls-files -z '*.cpp' '*.hpp' | xargs -0 clang-format -i"
+format-check = "git ls-files -z '*.cpp' '*.hpp' | xargs -0 clang-format --dry-run --Werror"
+tidy = { cmd = "cmake -S . -B build/tidy -G Ninja -DBUILD_TESTING=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && clang-tidy -p build/tidy --config-file=.clang-tidy $(git ls-files 'src/*.cpp' 'app/*.cpp')", depends-on = [] }
+coverage = "cmake -S . -B build/coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON -DCMAKE_CXX_FLAGS='--coverage -O0 -g' -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage && cmake --build build/coverage && ctest --test-dir build/coverage --output-on-failure && gcovr --root . --filter 'src/' --filter 'app/' --exclude 'test/' --exclude-unreachable-branches --exclude-throw-branches --xml-pretty --output coverage.xml --fail-under-line 85 build/coverage"

@@ -1,0 +1,47 @@
+name: Hardware compatibility report
+description: Report verified behavior with a specific Net F/T sensor configuration
+title: "[Hardware]: "
+body:
+  - type: input
+    id: sensor
+    attributes:
+      label: Sensor model
+      placeholder: ATI Net F/T model
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware or configuration version
+    validations:
+      required: true
+  - type: textarea
+    id: units
+    attributes:
+      label: Discovered calibration and units
+      description: Include the sensor-reported force unit, torque unit, and counts-per-unit values.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Host environment
+      description: OS, architecture, compiler, network topology, and netft-cpp version.
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results
+      description: Describe discovery, streaming, bias, reconnect, and status behavior tested.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: Testing was supervised and the sensor was unloaded before any bias command.
+          required: true
+        - label: Private network details and credentials have been removed.
+          required: true

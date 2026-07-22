@@ -1,0 +1,63 @@
+name: Bug report
+description: Report reproducible incorrect behavior in the SDK or CLI
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve netft-cpp. Do not include credentials or private data.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release, tag, or commit that shows the problem.
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - C++ SDK
+        - CLI
+        - Discovery and calibration
+        - Build or packaging
+        - Tests or automation
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, architecture, compiler, sensor model, and firmware when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Provide the smallest safe sequence that reproduces the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and logs
+      description: Remove credentials, private addresses, and sensitive payloads.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: No hardware was used, or all hardware actions were supervised and did not expose people or equipment to unsafe loads.
+          required: true

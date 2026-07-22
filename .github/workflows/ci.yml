@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Format and static analysis
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+      - name: Check formatting
+        run: pixi run format-check
+      - name: Run clang-tidy
+        run: pixi run tidy
+      - name: Test release publication states
+        run: bash test/release_publish_test.sh
+
+  build-and-test:
+    name: ${{ matrix.compiler.name }} ${{ matrix.build_type }} ${{ matrix.library }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+          - name: GCC
+            cxx: g++
+          - name: Clang
+            cxx: clang++
+        build_type: [Debug, Release]
+        library: [shared, static]
+        include:
+          - library: shared
+            build_shared: "ON"
+          - library: static
+            build_shared: "OFF"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+      - name: Configure
+        run: >-
+          pixi run cmake -S . -B build/ci -G Ninja
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DBUILD_SHARED_LIBS=${{ matrix.build_shared }}
+          -DBUILD_TESTING=ON
+      - name: Build
+        run: pixi run cmake --build build/ci
+      - name: Test
+        run: pixi run ctest --test-dir build/ci --output-on-failure
+      - name: Test installed package
+        env:
+          NETFT_CXX_COMPILER: ${{ matrix.compiler.cxx }}
+        run: pixi run bash test/install_test.sh ${{ matrix.library }}
+
+  sanitizers:
+    name: ASan and UBSan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+      - name: Configure
+        run: >-
+          pixi run cmake -S . -B build/sanitizers -G Ninja
+          -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_BUILD_TYPE=Debug
+          -DBUILD_SHARED_LIBS=ON
+          -DBUILD_TESTING=ON
+          -DNETFT_SANITIZERS=ON
+      - name: Build
+        run: pixi run cmake --build build/sanitizers
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: pixi run ctest --test-dir build/sanitizers --output-on-failure
+
+  arm64:
+    name: ARM64 Release shared
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+      - name: Configure
+        run: >-
+          pixi run cmake -S . -B build/arm64 -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_SHARED_LIBS=ON
+          -DBUILD_TESTING=ON
+      - name: Build
+        run: pixi run cmake --build build/arm64
+      - name: Test
+        run: pixi run ctest --test-dir build/arm64 --output-on-failure
+      - name: Test installed package
+        run: pixi run shared-test

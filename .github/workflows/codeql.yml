@@ -1,0 +1,40 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: c-cpp
+          build-mode: manual
+      - name: Configure
+        run: >-
+          pixi run cmake -S . -B build/codeql -G Ninja
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DBUILD_SHARED_LIBS=ON
+          -DBUILD_TESTING=ON
+      - name: Build
+        run: pixi run cmake --build build/codeql
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4

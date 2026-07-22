@@ -1,0 +1,28 @@
+# Build outputs
+/build/
+/install/
+/coverage/
+compile_commands.json
+
+# Pixi and local environments
+/.pixi/
+/.cache/
+
+# Test artifacts
+Testing/
+*.profraw
+*.profdata
+*.gcda
+*.gcno
+coverage.xml
+
+# Editors and internal design material
+/.vscode/
+/.idea/
+/.superpowers/
+*.swp
+*~
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db

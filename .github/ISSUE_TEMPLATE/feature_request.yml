@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a focused improvement to netft-cpp
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or integration problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the API, CLI, or workflow you would expect.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility impact
+      description: Note protocol, platform, ABI, or ros-netft backport implications.
+    validations:
+      required: true
