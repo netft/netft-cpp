@@ -67,6 +67,21 @@ jobs:
           NETFT_CXX_COMPILER: ${{ matrix.compiler.cxx }}
         run: pixi run bash test/install_test.sh ${{ matrix.library }}
 
+  cmake-316:
+    name: CMake 3.16 compatibility
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+      - name: Verify pinned CMake version
+        run: pixi run -e cmake-316 cmake --version | grep -E '^cmake version 3\.16\.'
+      - name: Test shared and static consumers
+        run: pixi run -e cmake-316 cmake-316-test
+
   sanitizers:
     name: ASan and UBSan
     runs-on: ubuntu-24.04

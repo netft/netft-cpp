@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.2 - 2026-07-22
+
+### Changed
+
+- Lower the supported CMake baseline from 3.20 to 3.16 and verify shared and static installed consumers with the pinned minimum version in CI.
+
 ## 0.1.1 - 2026-07-22
 
 ### Fixed

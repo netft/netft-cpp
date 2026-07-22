@@ -1,5 +1,5 @@
 add_executable(netft_types test_types.cpp)
-target_link_libraries(netft_types PRIVATE netft::netft GTest::gtest_main)
+target_link_libraries(netft_types PRIVATE netft::netft ${NETFT_GTEST_MAIN_TARGET})
 
 add_test(NAME netft_types COMMAND netft_types)
 
@@ -8,12 +8,12 @@ add_executable(netft_protocol
   ${CMAKE_CURRENT_SOURCE_DIR}/../src/detail/protocol.cpp
 )
 target_include_directories(netft_protocol PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
-target_link_libraries(netft_protocol PRIVATE netft::netft GTest::gtest_main)
+target_link_libraries(netft_protocol PRIVATE netft::netft ${NETFT_GTEST_MAIN_TARGET})
 
 add_test(NAME netft_protocol COMMAND netft_protocol)
 
 add_executable(netft_status test_status.cpp)
-target_link_libraries(netft_status PRIVATE netft::netft GTest::gtest_main)
+target_link_libraries(netft_status PRIVATE netft::netft ${NETFT_GTEST_MAIN_TARGET})
 
 add_test(NAME netft_status COMMAND netft_status)
 
@@ -22,7 +22,7 @@ add_executable(netft_sequence
   ${CMAKE_CURRENT_SOURCE_DIR}/../src/detail/sequence.cpp
 )
 target_include_directories(netft_sequence PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
-target_link_libraries(netft_sequence PRIVATE netft::netft GTest::gtest_main)
+target_link_libraries(netft_sequence PRIVATE netft::netft ${NETFT_GTEST_MAIN_TARGET})
 
 add_test(NAME netft_sequence COMMAND netft_sequence)
 
@@ -33,7 +33,7 @@ add_executable(netft_fault_latch
 target_include_directories(netft_fault_latch PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
-target_link_libraries(netft_fault_latch PRIVATE netft::netft GTest::gtest_main)
+target_link_libraries(netft_fault_latch PRIVATE netft::netft ${NETFT_GTEST_MAIN_TARGET})
 
 add_test(NAME netft_fault_latch COMMAND netft_fault_latch)
 
@@ -46,7 +46,7 @@ target_include_directories(netft_discovery PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
-target_link_libraries(netft_discovery PRIVATE netft::netft GTest::gtest_main)
+target_link_libraries(netft_discovery PRIVATE netft::netft ${NETFT_GTEST_MAIN_TARGET})
 
 add_test(NAME netft_discovery COMMAND netft_discovery)
 
@@ -59,7 +59,7 @@ target_include_directories(netft_client_stream PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
-target_link_libraries(netft_client_stream PRIVATE netft::netft GTest::gtest_main)
+target_link_libraries(netft_client_stream PRIVATE netft::netft ${NETFT_GTEST_MAIN_TARGET})
 
 add_test(NAME netft_client_stream COMMAND netft_client_stream)
 
@@ -72,7 +72,7 @@ target_include_directories(netft_client_recovery PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
-target_link_libraries(netft_client_recovery PRIVATE netft::netft GTest::gtest_main)
+target_link_libraries(netft_client_recovery PRIVATE netft::netft ${NETFT_GTEST_MAIN_TARGET})
 
 add_test(NAME netft_client_recovery COMMAND netft_client_recovery)
 
@@ -100,7 +100,7 @@ target_include_directories(netft_client_lifecycle PRIVATE
 )
 target_link_libraries(netft_client_lifecycle PRIVATE
   netft_client_impl_test
-  GTest::gtest_main
+  ${NETFT_GTEST_MAIN_TARGET}
 )
 
 add_test(NAME netft_client_lifecycle COMMAND netft_client_lifecycle)
@@ -120,7 +120,7 @@ target_compile_definitions(netft_cli_test PRIVATE
 )
 target_link_libraries(netft_cli_test PRIVATE
   netft_cli_lib
-  GTest::gtest_main
+  ${NETFT_GTEST_MAIN_TARGET}
 )
 add_dependencies(netft_cli_test netft_cli)
 
