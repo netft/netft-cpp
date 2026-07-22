@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.16)
 
 project(netft VERSION 0.1.1 LANGUAGES CXX)
 
@@ -113,5 +113,12 @@ install(
 
 if(BUILD_TESTING)
   find_package(GTest REQUIRED)
+  if(TARGET GTest::gtest_main)
+    set(NETFT_GTEST_MAIN_TARGET GTest::gtest_main)
+  elseif(TARGET GTest::Main)
+    set(NETFT_GTEST_MAIN_TARGET GTest::Main)
+  else()
+    message(FATAL_ERROR "GoogleTest does not provide a main target")
+  endif()
   add_subdirectory(test)
 endif()
