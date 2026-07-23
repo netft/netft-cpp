@@ -37,6 +37,21 @@ target_link_libraries(netft_fault_latch PRIVATE netft::netft ${NETFT_GTEST_MAIN_
 
 add_test(NAME netft_fault_latch COMMAND netft_fault_latch)
 
+add_executable(netft_posix_transport
+  test_posix_transport.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src/detail/posix_transport.cpp
+)
+target_compile_features(netft_posix_transport PRIVATE cxx_std_17)
+target_include_directories(netft_posix_transport PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src
+)
+target_link_options(netft_posix_transport PRIVATE
+  "-Wl,--wrap=poll"
+)
+target_link_libraries(netft_posix_transport PRIVATE ${NETFT_GTEST_MAIN_TARGET})
+
+add_test(NAME netft_posix_transport COMMAND netft_posix_transport)
+
 add_executable(netft_discovery
   test_discovery.cpp
   support/fake_http_server.cpp
