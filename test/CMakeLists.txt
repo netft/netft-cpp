@@ -47,6 +47,8 @@ target_include_directories(netft_posix_transport PRIVATE
 )
 target_link_options(netft_posix_transport PRIVATE
   "-Wl,--wrap=poll"
+  "-Wl,--wrap=recv"
+  "-Wl,--wrap=send"
 )
 target_link_libraries(netft_posix_transport PRIVATE ${NETFT_GTEST_MAIN_TARGET})
 
@@ -140,3 +142,21 @@ target_link_libraries(netft_cli_test PRIVATE
 add_dependencies(netft_cli_test netft_cli)
 
 add_test(NAME netft_cli COMMAND netft_cli_test)
+
+add_test(
+  NAME netft_cli_help
+  COMMAND ${CMAKE_COMMAND}
+    -DPROGRAM=$<TARGET_FILE:netft_cli>
+    -DEXPECTED_EXIT_CODE=0
+    -DARGUMENTS=--help
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_exit_code.cmake
+)
+
+add_test(
+  NAME netft_cli_invalid_command
+  COMMAND ${CMAKE_COMMAND}
+    -DPROGRAM=$<TARGET_FILE:netft_cli>
+    -DEXPECTED_EXIT_CODE=2
+    -DARGUMENTS=invalid-command
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_exit_code.cmake
+)
