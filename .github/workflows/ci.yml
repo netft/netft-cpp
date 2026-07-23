@@ -17,7 +17,7 @@ jobs:
     name: Format and static analysis
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           cache: true
@@ -47,7 +47,7 @@ jobs:
           - library: static
             build_shared: "OFF"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           cache: true
@@ -71,7 +71,7 @@ jobs:
     name: CMake 3.16 compatibility
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: prefix-dev/setup-pixi@v0.8.1
@@ -86,7 +86,7 @@ jobs:
     name: ASan and UBSan
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           cache: true
@@ -110,7 +110,7 @@ jobs:
     name: ARM64 Release shared
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           cache: true
