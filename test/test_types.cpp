@@ -1,9 +1,13 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <chrono>
 #include <functional>
 #include <limits>
+#include <set>
 #include <string>
+#include <string_view>
+#include <utility>
 
 #include "netft/types.hpp"
 
@@ -263,25 +267,52 @@ TEST(Config, RejectsAnAmbiguousManualCalibration) {
 }
 
 TEST(Units, ConvertsForceAndTorqueUnitStrings) {
-  EXPECT_EQ(netft::to_string(netft::ForceUnit::PoundForce), "lbf");
-  EXPECT_EQ(netft::to_string(netft::ForceUnit::Newton), "N");
-  EXPECT_EQ(netft::to_string(netft::ForceUnit::KiloPoundForce), "klbf");
-  EXPECT_EQ(netft::to_string(netft::ForceUnit::KiloNewton), "kN");
-  EXPECT_EQ(netft::to_string(netft::ForceUnit::KilogramForce), "kgf");
-  EXPECT_EQ(netft::force_unit_from_string("N"), netft::ForceUnit::Newton);
+  constexpr std::array force_cases{
+      std::pair{netft::ForceUnit::Unknown, std::string_view{"unknown"}},
+      std::pair{netft::ForceUnit::PoundForce, std::string_view{"lbf"}},
+      std::pair{netft::ForceUnit::Newton, std::string_view{"N"}},
+      std::pair{netft::ForceUnit::KiloPoundForce, std::string_view{"klbf"}},
+      std::pair{netft::ForceUnit::KiloNewton, std::string_view{"kN"}},
+      std::pair{netft::ForceUnit::KilogramForce, std::string_view{"kgf"}},
+  };
+  for (const auto &[unit, spelling] : force_cases) {
+    EXPECT_EQ(netft::to_string(unit), spelling);
+    EXPECT_EQ(netft::force_unit_from_string(spelling), unit);
+  }
   EXPECT_EQ(netft::force_unit_from_string("invalid"), std::nullopt);
 
-  EXPECT_EQ(netft::to_string(netft::TorqueUnit::PoundForceInch), "lbf-in");
-  EXPECT_EQ(netft::to_string(netft::TorqueUnit::PoundForceFoot), "lbf-ft");
-  EXPECT_EQ(netft::to_string(netft::TorqueUnit::NewtonMeter), "N-m");
-  EXPECT_EQ(netft::to_string(netft::TorqueUnit::NewtonMillimeter), "N-mm");
-  EXPECT_EQ(netft::to_string(netft::TorqueUnit::KilogramForceCentimeter), "kgf-cm");
-  EXPECT_EQ(netft::to_string(netft::TorqueUnit::KiloNewtonMeter), "kN-m");
-  EXPECT_EQ(netft::torque_unit_from_string("N-m"), netft::TorqueUnit::NewtonMeter);
+  constexpr std::array torque_cases{
+      std::pair{netft::TorqueUnit::Unknown, std::string_view{"unknown"}},
+      std::pair{netft::TorqueUnit::PoundForceInch, std::string_view{"lbf-in"}},
+      std::pair{netft::TorqueUnit::PoundForceFoot, std::string_view{"lbf-ft"}},
+      std::pair{netft::TorqueUnit::NewtonMeter, std::string_view{"N-m"}},
+      std::pair{netft::TorqueUnit::NewtonMillimeter, std::string_view{"N-mm"}},
+      std::pair{netft::TorqueUnit::KilogramForceCentimeter, std::string_view{"kgf-cm"}},
+      std::pair{netft::TorqueUnit::KiloNewtonMeter, std::string_view{"kN-m"}},
+  };
+  for (const auto &[unit, spelling] : torque_cases) {
+    EXPECT_EQ(netft::to_string(unit), spelling);
+    EXPECT_EQ(netft::torque_unit_from_string(spelling), unit);
+  }
   EXPECT_EQ(netft::torque_unit_from_string("invalid"), std::nullopt);
 }
 
 TEST(States, ConvertsStateAndFaultCodeStrings) {
-  EXPECT_EQ(netft::to_string(netft::ClientState::Streaming), "streaming");
-  EXPECT_EQ(netft::to_string(netft::FaultCode::SeriousStatus), "serious_status");
+  std::set<std::string_view> state_names;
+  for (const auto state :
+       {netft::ClientState::Stopped, netft::ClientState::Connecting, netft::ClientState::Streaming,
+        netft::ClientState::Backoff, netft::ClientState::Faulted}) {
+    state_names.insert(netft::to_string(state));
+  }
+  EXPECT_EQ(state_names.size(), 5U);
+
+  std::set<std::string_view> fault_names;
+  for (const auto code :
+       {netft::FaultCode::None, netft::FaultCode::SensorConfiguration, netft::FaultCode::Timeout,
+        netft::FaultCode::Socket, netft::FaultCode::SeriousStatus, netft::FaultCode::FtStall,
+        netft::FaultCode::FtBackward, netft::FaultCode::MalformedStorm,
+        netft::FaultCode::Callback}) {
+    fault_names.insert(netft::to_string(code));
+  }
+  EXPECT_EQ(fault_names.size(), 9U);
 }
