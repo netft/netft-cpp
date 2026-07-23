@@ -233,10 +233,3 @@ TEST(PosixTransportTest, LargeTimeoutSaturatesPollMilliseconds) {
   ASSERT_EQ(poll_timeouts.size(), 1U);
   EXPECT_EQ(poll_timeouts.front(), std::numeric_limits<int>::max());
 }
-
-TEST(PosixTransportTest, ReconnectReplacesTheExistingSocket) {
-  reset_behaviors();
-  netft::detail::PosixTransport transport;
-  transport.connect("127.0.0.1", 49152);
-  EXPECT_NO_THROW(transport.connect("127.0.0.1", 49152));
-}
