@@ -139,6 +139,27 @@ TEST(CliParser, RejectsMissingUnknownAndInvalidValues) {
   EXPECT_THROW(parse({"monitor", "--duration", "0"}), netft::cli::UsageError);
 }
 
+TEST(CliParser, RejectsEveryUnsupportedBoundaryWithoutInspectingCopy) {
+  const std::vector<std::vector<std::string>> cases{
+      {"monitor", "--host"},
+      {"monitor", "--duration", "not-a-number"},
+      {"monitor", "--rdt-port", "not-a-port"},
+      {"monitor", "--output", ""},
+      {"monitor", "--force-unit", "unsupported"},
+      {"monitor", "--torque-unit", "unsupported"},
+      {"monitor", "--unknown"},
+      {"info", "--duration", "1"},
+      {"bias", "--duration", "1"},
+      {"monitor", "--host", " "},
+      {"info", "--counts-per-force-unit", "1", "--counts-per-torque-unit", "1", "--force-unit", "N",
+       "--torque-unit", "N-mm"},
+  };
+
+  for (const auto &arguments : cases) {
+    EXPECT_THROW(netft::cli::parse_options(arguments), netft::cli::UsageError);
+  }
+}
+
 TEST(CliParser, RequiresCompleteManualCalibration) {
   EXPECT_THROW(parse({"monitor", "--counts-per-force-unit", "1000000"}), netft::cli::UsageError);
 
@@ -231,6 +252,42 @@ TEST(CliInfo, PreservesValidUtf8WhileEscapingJsonControls) {
                               "\\\"\xe4\xbc\xa0\\n\xe6\x84\x9f\xe5\x99\xa8"
                               "\xf0\x9f\xa7\xad\""),
             std::string::npos);
+}
+
+TEST(CliInfo, SerializesEveryJsonControlBranch) {
+  netft::test::FakeSensor sensor;
+  std::string product{"controls"};
+  product.push_back('"');
+  product.push_back('\\');
+  product.push_back('\b');
+  product.push_back('\f');
+  product.push_back('\n');
+  product.push_back('\r');
+  product.push_back('\t');
+  product.push_back(static_cast<char>(0x01));
+  sensor.set_xml_configuration("<netft><prodname>" + product +
+                               "</prodname><cfgcpf>1000000</cfgcpf><cfgcpt>1000000</cfgcpt>"
+                               "<scfgfu>N</scfgfu><scfgtu>Nm</scfgtu></netft>");
+  auto options = options_for(netft::cli::Command::Info, sensor);
+  std::ostringstream output;
+  std::ostringstream errors;
+
+  ASSERT_EQ(netft::cli::run(options, output, errors), 0);
+  EXPECT_NE(output.str().find(R"json("product":"controls\"\\\b\f\n\r\t\u0001")json"),
+            std::string::npos);
+  EXPECT_TRUE(errors.str().empty());
+}
+
+TEST(CliInfo, HumanOutputIsNonempty) {
+  netft::test::FakeSensor sensor;
+  auto options = options_for(netft::cli::Command::Info, sensor);
+  options.json = false;
+  std::ostringstream output;
+  std::ostringstream errors;
+
+  EXPECT_EQ(netft::cli::run(options, output, errors), 0);
+  EXPECT_FALSE(output.str().empty());
+  EXPECT_TRUE(errors.str().empty());
 }
 
 TEST(CliMonitor, EmitsStableJsonAndUsesDeliveredCountAsSampleCount) {
@@ -362,6 +419,21 @@ TEST(CliMonitor, ReturnsTwoWhenNoSampleArrives) {
   EXPECT_FALSE(errors.str().empty());
 }
 
+TEST(CliMonitor, ReturnsTwoAfterAStoredClientTimeout) {
+  netft::test::FakeSensor sensor;
+  sensor.pause();
+  auto options = options_for(netft::cli::Command::Monitor, sensor);
+  options.config.receive_timeout = 20ms;
+  options.config.recovery_policy = netft::RecoveryPolicy::FailStop;
+  options.duration = 80ms;
+  std::ostringstream output;
+  std::ostringstream errors;
+
+  EXPECT_EQ(netft::cli::run(options, output, errors), 2);
+  EXPECT_TRUE(output.str().empty());
+  EXPECT_FALSE(errors.str().empty());
+}
+
 TEST(CliBias, BiasesAfterFirstSampleAndReportsLaterSample) {
   netft::test::FakeSensor sensor{10.0};
   auto options = options_for(netft::cli::Command::Bias, sensor);
@@ -382,6 +454,32 @@ TEST(CliBias, BiasesAfterFirstSampleAndReportsLaterSample) {
   EXPECT_GE(json_unsigned(output.str(), "delivered_count"), 3U);
 }
 
+TEST(CliBias, StopsWhenAlreadyInterruptedBeforeAFirstSample) {
+  netft::test::FakeSensor sensor;
+  sensor.pause();
+  auto options = options_for(netft::cli::Command::Bias, sensor);
+  volatile std::sig_atomic_t interrupted = 1;
+  std::ostringstream output;
+  std::ostringstream errors;
+
+  EXPECT_EQ(netft::cli::run(options, output, errors, &interrupted), 130);
+  EXPECT_TRUE(output.str().empty());
+}
+
+TEST(CliBias, ReturnsTwoWhenTheClientFaultsBeforeAFirstSample) {
+  netft::test::FakeSensor sensor;
+  sensor.pause();
+  auto options = options_for(netft::cli::Command::Bias, sensor);
+  options.config.receive_timeout = 20ms;
+  options.config.recovery_policy = netft::RecoveryPolicy::FailStop;
+  std::ostringstream output;
+  std::ostringstream errors;
+
+  EXPECT_EQ(netft::cli::run(options, output, errors), 2);
+  EXPECT_TRUE(output.str().empty());
+  EXPECT_FALSE(errors.str().empty());
+}
+
 TEST(CliOutput, WritesResultToRequestedFile) {
   netft::test::FakeSensor sensor;
   auto options = options_for(netft::cli::Command::Info, sensor);
@@ -397,6 +495,22 @@ TEST(CliOutput, WritesResultToRequestedFile) {
   std::ifstream file{path};
   const std::string text{std::istreambuf_iterator<char>{file}, {}};
   EXPECT_FALSE(text.empty());
+  std::filesystem::remove(path);
+}
+
+TEST(CliOutput, PreservesAnExistingDirectoryWhenReplacementFails) {
+  netft::test::FakeSensor sensor;
+  auto options = options_for(netft::cli::Command::Info, sensor);
+  const auto path = temporary_path("output-directory");
+  std::filesystem::remove_all(path);
+  ASSERT_TRUE(std::filesystem::create_directory(path));
+  options.output_path = path.string();
+  std::ostringstream output;
+  std::ostringstream errors;
+
+  EXPECT_EQ(netft::cli::run(options, output, errors), 2);
+  EXPECT_TRUE(output.str().empty());
+  EXPECT_TRUE(std::filesystem::is_directory(path));
   std::filesystem::remove(path);
 }
 

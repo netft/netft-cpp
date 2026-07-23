@@ -7,12 +7,14 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include "detail/xml_config.hpp"
 #include "netft/discovery.hpp"
@@ -68,6 +70,41 @@ netft::DiscoveryOptions options_for(const FakeHttpServer &server) {
   options.connect_timeout = std::chrono::milliseconds{200};
   options.total_timeout = std::chrono::milliseconds{500};
   return options;
+}
+
+TEST(SensorDiscovery, RejectsInvalidPublicOptionsBeforeNetworkIo) {
+  const std::vector<std::function<void(netft::DiscoveryOptions &)>> cases{
+      [](auto &options) { options.sensor_host.clear(); },
+      [](auto &options) { options.sensor_host = " \t\r\n"; },
+      [](auto &options) { options.http_port = 0; },
+      [](auto &options) { options.http_port = 65'536; },
+      [](auto &options) { options.connect_timeout = std::chrono::duration<double>{0.0}; },
+      [](auto &options) { options.connect_timeout = std::chrono::duration<double>{-1.0}; },
+      [](auto &options) {
+        options.connect_timeout =
+            std::chrono::duration<double>{std::numeric_limits<double>::infinity()};
+      },
+      [](auto &options) {
+        options.connect_timeout =
+            std::chrono::duration<double>{std::numeric_limits<double>::quiet_NaN()};
+      },
+      [](auto &options) { options.total_timeout = std::chrono::duration<double>{0.0}; },
+      [](auto &options) { options.total_timeout = std::chrono::duration<double>{-1.0}; },
+      [](auto &options) {
+        options.total_timeout =
+            std::chrono::duration<double>{std::numeric_limits<double>::infinity()};
+      },
+      [](auto &options) {
+        options.total_timeout =
+            std::chrono::duration<double>{std::numeric_limits<double>::quiet_NaN()};
+      },
+  };
+
+  for (const auto &configure : cases) {
+    netft::DiscoveryOptions options;
+    configure(options);
+    EXPECT_THROW(netft::discover_sensor(options), netft::DiscoveryError);
+  }
 }
 
 TEST(XmlConfiguration, ParsesTheRealSensorFixtureExactly) {
