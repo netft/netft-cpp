@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.3 - 2026-07-23
+
+### Fixed
+
+- Keep UDP receive timeouts bounded when `poll()` is interrupted by signals, preventing repeated `EINTR` retries from extending the configured timeout.
+
 ## 0.1.2 - 2026-07-22
 
 ### Changed
