@@ -47,6 +47,8 @@ target_include_directories(netft_posix_transport PRIVATE
 )
 target_link_options(netft_posix_transport PRIVATE
   "-Wl,--wrap=poll"
+  "-Wl,--wrap=recv"
+  "-Wl,--wrap=send"
 )
 target_link_libraries(netft_posix_transport PRIVATE ${NETFT_GTEST_MAIN_TARGET})
 
