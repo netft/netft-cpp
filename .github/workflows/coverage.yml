@@ -27,6 +27,7 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           files: coverage.xml
+          disable_search: true
           flags: unit
           fail_ci_if_error: true
           use_oidc: true
