@@ -272,8 +272,9 @@ TEST(CliInfo, SerializesEveryJsonControlBranch) {
   std::ostringstream output;
   std::ostringstream errors;
 
-  EXPECT_EQ(netft::cli::run(options, output, errors), 0);
-  EXPECT_FALSE(output.str().empty());
+  ASSERT_EQ(netft::cli::run(options, output, errors), 0);
+  EXPECT_NE(output.str().find(R"json("product":"controls\"\\\b\f\n\r\t\u0001")json"),
+            std::string::npos);
   EXPECT_TRUE(errors.str().empty());
 }
 
@@ -418,12 +419,13 @@ TEST(CliMonitor, ReturnsTwoWhenNoSampleArrives) {
   EXPECT_FALSE(errors.str().empty());
 }
 
-TEST(CliMonitor, IncludesAStoredClientFailureWhenNoSampleArrives) {
+TEST(CliMonitor, ReturnsTwoAfterAStoredClientTimeout) {
   netft::test::FakeSensor sensor;
+  sensor.pause();
   auto options = options_for(netft::cli::Command::Monitor, sensor);
-  options.config.rdt_port = 1;
+  options.config.receive_timeout = 20ms;
   options.config.recovery_policy = netft::RecoveryPolicy::FailStop;
-  options.duration = 50ms;
+  options.duration = 80ms;
   std::ostringstream output;
   std::ostringstream errors;
 

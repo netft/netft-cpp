@@ -4,7 +4,6 @@
 #include <chrono>
 #include <functional>
 #include <limits>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -298,21 +297,29 @@ TEST(Units, ConvertsForceAndTorqueUnitStrings) {
 }
 
 TEST(States, ConvertsStateAndFaultCodeStrings) {
-  std::set<std::string_view> state_names;
-  for (const auto state :
-       {netft::ClientState::Stopped, netft::ClientState::Connecting, netft::ClientState::Streaming,
-        netft::ClientState::Backoff, netft::ClientState::Faulted}) {
-    state_names.insert(netft::to_string(state));
+  constexpr std::array state_cases{
+      std::pair{netft::ClientState::Stopped, std::string_view{"stopped"}},
+      std::pair{netft::ClientState::Connecting, std::string_view{"connecting"}},
+      std::pair{netft::ClientState::Streaming, std::string_view{"streaming"}},
+      std::pair{netft::ClientState::Backoff, std::string_view{"backoff"}},
+      std::pair{netft::ClientState::Faulted, std::string_view{"faulted"}},
+  };
+  for (const auto &[state, spelling] : state_cases) {
+    EXPECT_EQ(netft::to_string(state), spelling);
   }
-  EXPECT_EQ(state_names.size(), 5U);
 
-  std::set<std::string_view> fault_names;
-  for (const auto code :
-       {netft::FaultCode::None, netft::FaultCode::SensorConfiguration, netft::FaultCode::Timeout,
-        netft::FaultCode::Socket, netft::FaultCode::SeriousStatus, netft::FaultCode::FtStall,
-        netft::FaultCode::FtBackward, netft::FaultCode::MalformedStorm,
-        netft::FaultCode::Callback}) {
-    fault_names.insert(netft::to_string(code));
+  constexpr std::array fault_cases{
+      std::pair{netft::FaultCode::None, std::string_view{"none"}},
+      std::pair{netft::FaultCode::SensorConfiguration, std::string_view{"sensor_configuration"}},
+      std::pair{netft::FaultCode::Timeout, std::string_view{"timeout"}},
+      std::pair{netft::FaultCode::Socket, std::string_view{"socket"}},
+      std::pair{netft::FaultCode::SeriousStatus, std::string_view{"serious_status"}},
+      std::pair{netft::FaultCode::FtStall, std::string_view{"ft_stall"}},
+      std::pair{netft::FaultCode::FtBackward, std::string_view{"ft_backward"}},
+      std::pair{netft::FaultCode::MalformedStorm, std::string_view{"malformed_storm"}},
+      std::pair{netft::FaultCode::Callback, std::string_view{"callback"}},
+  };
+  for (const auto &[code, spelling] : fault_cases) {
+    EXPECT_EQ(netft::to_string(code), spelling);
   }
-  EXPECT_EQ(fault_names.size(), 9U);
 }
