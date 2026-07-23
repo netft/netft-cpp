@@ -16,7 +16,7 @@ namespace {
 
 using namespace std::chrono_literals;
 
-enum class PollBehavior { RepeatedEintrThenTimeout, Error };
+enum class PollBehavior { RepeatedEintrThenTimeout, EintrPastDeadline, Error };
 
 constexpr int kInterruptCount = 3;
 std::vector<int> poll_timeouts;
@@ -30,6 +30,14 @@ extern "C" int __wrap_poll(pollfd *, nfds_t, const int timeout) {
   if (poll_behavior == PollBehavior::Error) {
     errno = EBADF;
     return -1;
+  }
+  if (poll_behavior == PollBehavior::EintrPastDeadline) {
+    if (poll_calls++ == 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds{timeout} + 10ms);
+      errno = EINTR;
+      return -1;
+    }
+    return 0;
   }
   if (poll_calls++ < kInterruptCount) {
     std::this_thread::sleep_for(10ms);
@@ -68,5 +76,18 @@ TEST(PosixTransportTest, NonEintrPollErrorStillThrows) {
   std::array<std::uint8_t, 36> buffer{};
 
   EXPECT_THROW(transport.receive(buffer.data(), buffer.size(), 100ms), std::runtime_error);
+  EXPECT_EQ(poll_timeouts.size(), 1U);
+}
+
+TEST(PosixTransportTest, ExpiredDeadlineDoesNotRepoll) {
+  poll_timeouts.clear();
+  poll_calls = 0;
+  poll_behavior = PollBehavior::EintrPastDeadline;
+
+  netft::detail::PosixTransport transport;
+  transport.connect("127.0.0.1", 49152);
+  std::array<std::uint8_t, 36> buffer{};
+
+  EXPECT_EQ(transport.receive(buffer.data(), buffer.size(), 20ms), 0U);
   EXPECT_EQ(poll_timeouts.size(), 1U);
 }
