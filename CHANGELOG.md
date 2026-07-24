@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.0 - 2026-07-24
+
+### Added
+
+- Expose the exact signed RDT axis counts on every `Sample` through `raw_wrench`, ordered as force X/Y/Z followed by torque X/Y/Z.
+
+### Changed
+
+- Advance the shared-library ABI for the expanded public `Sample` layout.
+
 ## 0.1.3 - 2026-07-23
 
 ### Fixed

@@ -71,7 +71,8 @@ int main() {
 
   netft::Client client{config};
   client.start([](const netft::Sample &sample) {
-    std::cout << sample.force[0] << ' ' << netft::to_string(sample.force_unit) << '\n';
+    std::cout << sample.raw_wrench[0] << ' ' << sample.force[0] << ' '
+              << netft::to_string(sample.force_unit) << '\n';
   });
   const bool received = client.wait_for_first_sample(std::chrono::seconds{2});
   client.stop();
@@ -107,9 +108,9 @@ failure, and `130` for interruption by `SIGINT`.
 Without a manual override, the client requests `http://HOST:HTTP_PORT/netftapi2.xml` before
 each streaming session and reads the product name, counts per force unit, counts per torque
 unit, force unit, and torque unit. Raw RDT counts are divided by those sensor-selected
-calibration scales. Every `Sample` carries the resulting `force_unit`, `torque_unit`, and
-configuration revision, and the active configuration is also available through
-`Client::health()`.
+calibration scales. Every `Sample` carries the exact signed RDT counts in `raw_wrench`, the calibrated `force`
+and `torque` values, the resulting `force_unit` and `torque_unit`, and the configuration
+revision. The active configuration is also available through `Client::health()`.
 
 Sample values therefore use the units selected by the sensor; the library does not silently
 convert them to a preferred unit system. In particular, do not assume that an ATI sensor's
