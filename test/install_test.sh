@@ -68,7 +68,11 @@ mkdir -p "$incompatible_consumer_source"
 printf '%s\n' \
   'cmake_minimum_required(VERSION 3.16)' \
   'project(netft_incompatible_consumer LANGUAGES CXX)' \
-  'find_package(netft 0.1 CONFIG QUIET)' \
+  'if(NOT DEFINED NETFT_PROBE_PREFIX OR NETFT_PROBE_PREFIX STREQUAL "")' \
+  '  message(FATAL_ERROR "NETFT_PROBE_PREFIX must be defined and nonempty")' \
+  'endif()' \
+  'find_package(netft 0.1 CONFIG QUIET' \
+  '  PATHS "${NETFT_PROBE_PREFIX}" NO_DEFAULT_PATH)' \
   'if(netft_FOUND)' \
   '  message(FATAL_ERROR "netft 0.2 package accepted incompatible 0.1 request")' \
   'endif()' \
@@ -76,7 +80,7 @@ printf '%s\n' \
 cmake -S "$incompatible_consumer_source" \
   -B "$incompatible_consumer_build" -G Ninja \
   "${cmake_compiler_args[@]}" \
-  -DCMAKE_PREFIX_PATH="$prefix"
+  -DNETFT_PROBE_PREFIX="$prefix"
 
 if find "$prefix" -name '*netft_cli_lib*' -print -quit | grep -q .; then
   echo "private netft_cli_lib was installed" >&2
