@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.2 - 2026-07-25
+
+### Fixed
+
+- Require libcurl 7.63.0 or newer, matching the first release that provides the `CURLOPT_CURLU` API used by sensor discovery.
+
 ## 0.2.1 - 2026-07-25
 
 ### Fixed

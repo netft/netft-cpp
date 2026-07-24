@@ -160,3 +160,8 @@ add_test(
     -DARGUMENTS=invalid-command
     -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_exit_code.cmake
 )
+
+add_test(
+  NAME netft_curl_minimum
+  COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/curl_minimum_test.sh
+)
