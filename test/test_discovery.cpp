@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <array>
+#include <cfenv>
 #include <chrono>
 #include <cmath>
 #include <functional>
@@ -81,6 +82,23 @@ public:
 
 private:
   std::locale original_;
+};
+
+class RoundingModeGuard {
+public:
+  RoundingModeGuard() : original_{std::fegetround()} {}
+
+  ~RoundingModeGuard() {
+    if (original_ != -1) {
+      static_cast<void>(std::fesetround(original_));
+    }
+  }
+
+  RoundingModeGuard(const RoundingModeGuard &) = delete;
+  RoundingModeGuard &operator=(const RoundingModeGuard &) = delete;
+
+private:
+  int original_;
 };
 
 netft::DiscoveryOptions options_for(const FakeHttpServer &server) {
@@ -212,6 +230,28 @@ TEST(XmlConfiguration, ParsesCountsIndependentlyOfTheGlobalLocale) {
   EXPECT_THROW(
       netft::detail::parse_sensor_configuration(replace_value(kValidXml, "cfgcpf", "1234,5")),
       netft::DiscoveryError);
+}
+
+TEST(XmlConfiguration, UsesRoundToNearestAndRestoresTheCallersRoundingMode) {
+  const RoundingModeGuard restore_rounding_mode;
+  ASSERT_EQ(std::fesetround(FE_UPWARD), 0);
+  const auto xml =
+      replace_value(kValidXml, "cfgcpf", "1.00000000000000011102230246251565404236316680908203125");
+
+  const auto result = netft::detail::parse_sensor_configuration(xml);
+
+  EXPECT_EQ(result.calibration.counts_per_force_unit, 0x1p+0);
+  EXPECT_EQ(std::fegetround(), FE_UPWARD);
+}
+
+TEST(XmlConfiguration, RestoresTheCallersRoundingModeWhenParsingThrows) {
+  const RoundingModeGuard restore_rounding_mode;
+  ASSERT_EQ(std::fesetround(FE_UPWARD), 0);
+
+  EXPECT_THROW(
+      netft::detail::parse_sensor_configuration(replace_value(kValidXml, "cfgcpf", "invalid")),
+      netft::DiscoveryError);
+  EXPECT_EQ(std::fegetround(), FE_UPWARD);
 }
 
 TEST(XmlConfiguration, TrimsAsciiWhitespaceAroundEveryValue) {

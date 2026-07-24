@@ -1,7 +1,9 @@
 #include "detail/xml_config.hpp"
 
 #include <array>
+#include <cfenv>
 #include <cmath>
+#include <exception>
 #include <locale>
 #include <sstream>
 #include <string>
@@ -63,6 +65,46 @@ struct OpenElement {
 };
 
 using RequiredFields = std::array<std::string, kRequiredTags.size()>;
+
+class ScopedRoundToNearest {
+public:
+  ScopedRoundToNearest() {
+    const int rounding_mode = std::fegetround();
+    if (rounding_mode == -1) {
+      throw DiscoveryError("failed to inspect the floating-point rounding mode");
+    }
+    if (rounding_mode == FE_TONEAREST) {
+      return;
+    }
+    if (std::fegetenv(&environment_) != 0) {
+      throw DiscoveryError("failed to save the floating-point environment");
+    }
+    if (std::fesetround(FE_TONEAREST) != 0) {
+      restore_environment_or_terminate();
+      throw DiscoveryError("failed to select round-to-nearest floating-point parsing");
+    }
+    active_ = true;
+  }
+
+  ~ScopedRoundToNearest() {
+    if (active_) {
+      restore_environment_or_terminate();
+    }
+  }
+
+  ScopedRoundToNearest(const ScopedRoundToNearest &) = delete;
+  ScopedRoundToNearest &operator=(const ScopedRoundToNearest &) = delete;
+
+private:
+  void restore_environment_or_terminate() noexcept {
+    if (std::fesetenv(&environment_) != 0) {
+      std::terminate();
+    }
+  }
+
+  std::fenv_t environment_{};
+  bool active_{false};
+};
 
 void append_required_text(const std::vector<OpenElement> &elements, RequiredFields &fields,
                           std::string_view text) {
@@ -184,6 +226,7 @@ RequiredFields extract_required_fields(std::string_view xml) {
 }
 
 double parse_positive_count(std::string_view value, std::string_view tag) {
+  const ScopedRoundToNearest rounding_mode;
   double result{};
   std::istringstream input{std::string{value}};
   input.imbue(std::locale::classic());
