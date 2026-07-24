@@ -9,6 +9,7 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <locale>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -62,6 +63,25 @@ std::string insert_after_root_open(std::string_view xml, std::string_view markup
   result.insert(position, markup);
   return result;
 }
+
+class CommaDecimalPoint final : public std::numpunct<char> {
+protected:
+  char do_decimal_point() const override { return ','; }
+};
+
+class GlobalLocaleGuard {
+public:
+  explicit GlobalLocaleGuard(const std::locale &replacement)
+      : original_{std::locale::global(replacement)} {}
+
+  ~GlobalLocaleGuard() { std::locale::global(original_); }
+
+  GlobalLocaleGuard(const GlobalLocaleGuard &) = delete;
+  GlobalLocaleGuard &operator=(const GlobalLocaleGuard &) = delete;
+
+private:
+  std::locale original_;
+};
 
 netft::DiscoveryOptions options_for(const FakeHttpServer &server) {
   netft::DiscoveryOptions options;
@@ -119,6 +139,16 @@ TEST(XmlConfiguration, ParsesTheRealSensorFixtureExactly) {
   EXPECT_EQ(result.revision, 1U);
 }
 
+TEST(XmlConfiguration, ParsesDecimalAndScientificCountsExactly) {
+  auto xml = replace_value(kValidXml, "cfgcpf", "1234.5");
+  xml = replace_value(xml, "cfgcpt", "2.5e6");
+
+  const auto result = netft::detail::parse_sensor_configuration(xml);
+
+  EXPECT_DOUBLE_EQ(result.calibration.counts_per_force_unit, 1234.5);
+  EXPECT_DOUBLE_EQ(result.calibration.counts_per_torque_unit, 2'500'000.0);
+}
+
 class RequiredXmlField : public ::testing::TestWithParam<const char *> {};
 
 TEST_P(RequiredXmlField, RejectsMissingFields) {
@@ -164,11 +194,25 @@ INSTANTIATE_TEST_SUITE_P(
     EveryInvalidForm, InvalidXmlCount,
     ::testing::Values(InvalidCountCase{"cfgcpf", "not-a-number"},
                       InvalidCountCase{"cfgcpf", "10remaining"}, InvalidCountCase{"cfgcpf", "0"},
-                      InvalidCountCase{"cfgcpf", "-1"}, InvalidCountCase{"cfgcpf", "NaN"},
-                      InvalidCountCase{"cfgcpf", "inf"}, InvalidCountCase{"cfgcpt", "not-a-number"},
+                      InvalidCountCase{"cfgcpf", "-1"}, InvalidCountCase{"cfgcpf", "+1"},
+                      InvalidCountCase{"cfgcpf", "NaN"}, InvalidCountCase{"cfgcpf", "inf"},
+                      InvalidCountCase{"cfgcpf", "1e9999"}, InvalidCountCase{"cfgcpf", "1e-9999"},
+                      InvalidCountCase{"cfgcpt", "not-a-number"},
                       InvalidCountCase{"cfgcpt", "10remaining"}, InvalidCountCase{"cfgcpt", "0"},
                       InvalidCountCase{"cfgcpt", "-1"}, InvalidCountCase{"cfgcpt", "NaN"},
                       InvalidCountCase{"cfgcpt", "infinity"}));
+
+TEST(XmlConfiguration, ParsesCountsIndependentlyOfTheGlobalLocale) {
+  const GlobalLocaleGuard locale_guard{std::locale{std::locale::classic(), new CommaDecimalPoint}};
+  const auto xml = replace_value(kValidXml, "cfgcpf", "1234.5");
+
+  const auto result = netft::detail::parse_sensor_configuration(xml);
+
+  EXPECT_DOUBLE_EQ(result.calibration.counts_per_force_unit, 1234.5);
+  EXPECT_THROW(
+      netft::detail::parse_sensor_configuration(replace_value(kValidXml, "cfgcpf", "1234,5")),
+      netft::DiscoveryError);
+}
 
 TEST(XmlConfiguration, TrimsAsciiWhitespaceAroundEveryValue) {
   auto xml = replace_value(kValidXml, "prodname", " \tEthernet Axia\r\n");

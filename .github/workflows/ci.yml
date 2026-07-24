@@ -82,6 +82,17 @@ jobs:
       - name: Test shared and static consumers
         run: pixi run -e cmake-316 cmake-316-test
 
+  gcc-10:
+    name: GCC 10 compatibility
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@v0.10.0
+      - name: Build and test with GCC 10
+        run: pixi run gcc-10-test
+
   sanitizers:
     name: ASan and UBSan
     runs-on: ubuntu-24.04

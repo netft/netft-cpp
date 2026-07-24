@@ -1,10 +1,10 @@
 #include "detail/xml_config.hpp"
 
 #include <array>
-#include <charconv>
 #include <cmath>
+#include <locale>
+#include <sstream>
 #include <string>
-#include <system_error>
 #include <vector>
 
 #include "netft/discovery.hpp"
@@ -185,10 +185,11 @@ RequiredFields extract_required_fields(std::string_view xml) {
 
 double parse_positive_count(std::string_view value, std::string_view tag) {
   double result{};
-  const auto parsed = std::from_chars(value.data(), value.data() + value.size(), result,
-                                      std::chars_format::general);
-  if (parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size() ||
-      !std::isfinite(result) || result <= 0.0) {
+  std::istringstream input{std::string{value}};
+  input.imbue(std::locale::classic());
+  input >> std::noskipws >> result;
+  if (value.empty() || value.front() == '+' || !input ||
+      input.peek() != std::char_traits<char>::eof() || !std::isfinite(result) || result <= 0.0) {
     throw DiscoveryError("sensor configuration field '" + std::string{tag} +
                          "' must be a finite positive number");
   }

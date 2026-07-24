@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.1 - 2026-07-25
+
+### Fixed
+
+- Restore GCC 10 and manylinux2014 source compatibility by parsing sensor calibration counts with a C++17 locale-independent implementation.
+
 ## 0.2.0 - 2026-07-24
 
 ### Added

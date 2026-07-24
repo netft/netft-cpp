@@ -134,6 +134,9 @@ SensorConfiguration discover_sensor(const DiscoveryOptions &options) {
     host = "[" + host + "]";
   }
   const std::string port = std::to_string(options.http_port);
+  // ATI Net F/T firmware exposes configuration through HTTP only. Redirects, proxies, and
+  // alternate transfer protocols are disabled below; SECURITY.md documents the trust boundary.
+  // codeql[cpp/non-https-url]
   set_url_part(url.get(), CURLUPART_SCHEME, "http");
   set_url_part(url.get(), CURLUPART_HOST, host.c_str());
   set_url_part(url.get(), CURLUPART_PORT, port.c_str());
