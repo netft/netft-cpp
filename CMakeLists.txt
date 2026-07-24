@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(netft VERSION 0.1.3 LANGUAGES CXX)
+project(netft VERSION 0.2.0 LANGUAGES CXX)
 
 include(CTest)
 include(GNUInstallDirs)
@@ -42,7 +42,7 @@ target_compile_definitions(netft PRIVATE NETFT_BUILDING_LIBRARY)
 
 set_target_properties(netft PROPERTIES
   VERSION "${PROJECT_VERSION}"
-  SOVERSION 0
+  SOVERSION 1
   CXX_VISIBILITY_PRESET hidden
   VISIBILITY_INLINES_HIDDEN YES
 )
@@ -96,7 +96,7 @@ configure_package_config_file(
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/netftConfigVersion.cmake"
   VERSION "${PROJECT_VERSION}"
-  COMPATIBILITY SameMajorVersion
+  COMPATIBILITY SameMinorVersion
 )
 install(
   EXPORT netftTargets
