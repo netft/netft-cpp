@@ -61,4 +61,6 @@ test "${pixi_version}" = "${cmake_version}"
 
 grep -Eq '^find_dependency\(CURL 7\.63(\.0)?\)$' \
   "${repo_root}/cmake/netftConfig.cmake.in"
+grep -Eq '^[[:space:]]*libcurl = ">=7\.63\.0"$' \
+  "${repo_root}/pixi.toml"
 grep -Eq '^[[:space:]]*SOVERSION 1$' "${repo_root}/CMakeLists.txt"
