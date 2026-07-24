@@ -25,6 +25,8 @@ jobs:
         run: pixi run format-check
       - name: Run clang-tidy
         run: pixi run tidy
+      - name: Validate workflow configuration
+        run: pixi run workflow-check
       - name: Test release publication states
         run: bash test/release_publish_test.sh
 

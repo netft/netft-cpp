@@ -28,6 +28,7 @@ jobs:
         with:
           languages: c-cpp
           build-mode: manual
+          queries: +codeql/cpp-queries:AlertSuppression.ql
       - name: Configure
         run: >-
           pixi run cmake -S . -B build/codeql -G Ninja
