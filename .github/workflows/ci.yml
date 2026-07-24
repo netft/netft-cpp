@@ -25,6 +25,8 @@ jobs:
         run: pixi run format-check
       - name: Run clang-tidy
         run: pixi run tidy
+      - name: Validate workflow configuration
+        run: pixi run workflow-check
       - name: Test release publication states
         run: bash test/release_publish_test.sh
 
@@ -81,6 +83,17 @@ jobs:
         run: pixi run -e cmake-316 cmake --version | grep -E '^cmake version 3\.16\.'
       - name: Test shared and static consumers
         run: pixi run -e cmake-316 cmake-316-test
+
+  gcc-10:
+    name: GCC 10 compatibility
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@v0.10.0
+      - name: Build and test with GCC 10
+        run: bash test/gcc10_compatibility_test.sh
 
   sanitizers:
     name: ASan and UBSan

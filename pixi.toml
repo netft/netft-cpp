@@ -1,6 +1,6 @@
 [workspace]
 name = "netft-cpp"
-version = "0.2.0"
+version = "0.2.1"
 channels = ["conda-forge"]
 platforms = ["linux-64", "linux-aarch64"]
 
@@ -16,6 +16,8 @@ clang-tools = "*"
 lcov = "*"
 gcovr = "*"
 python = "*"
+actionlint = "*"
+yq = "*"
 
 [tasks]
 configure = "cmake -S . -B build -G Ninja -DBUILD_TESTING=ON"
@@ -30,6 +32,8 @@ format = "git ls-files -z '*.cpp' '*.hpp' | xargs -0 clang-format -i"
 format-check = "git ls-files -z '*.cpp' '*.hpp' | xargs -0 clang-format --dry-run --Werror"
 tidy = { cmd = "cmake -S . -B build/tidy -G Ninja -DBUILD_TESTING=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && clang-tidy -p build/tidy --config-file=.clang-tidy $(git ls-files 'src/*.cpp' 'app/*.cpp')", depends-on = [] }
 coverage = "cmake -S . -B build/coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON -DCMAKE_CXX_FLAGS='--coverage -O0 -g' -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage && cmake --build build/coverage && ctest --test-dir build/coverage --output-on-failure && gcovr --root . --filter 'src/' --filter 'app/' --exclude 'test/' --exclude-unreachable-branches --exclude-throw-branches --xml-pretty --output coverage.xml build/coverage"
+gcc-10-test = "bash test/gcc10_compatibility_test.sh"
+workflow-check = "actionlint && bash test/codeql_workflow_test.sh"
 
 [feature.cmake-316.dependencies]
 cmake = "3.16.*"

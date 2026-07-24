@@ -1,14 +1,18 @@
 #include <gtest/gtest.h>
 
 #include <arpa/inet.h>
+#include <fenv.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <array>
+#include <cfenv>
 #include <chrono>
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <locale>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -62,6 +66,56 @@ std::string insert_after_root_open(std::string_view xml, std::string_view markup
   result.insert(position, markup);
   return result;
 }
+
+class CommaDecimalPoint final : public std::numpunct<char> {
+protected:
+  char do_decimal_point() const override { return ','; }
+};
+
+class GlobalLocaleGuard {
+public:
+  explicit GlobalLocaleGuard(const std::locale &replacement)
+      : original_{std::locale::global(replacement)} {}
+
+  ~GlobalLocaleGuard() { std::locale::global(original_); }
+
+  GlobalLocaleGuard(const GlobalLocaleGuard &) = delete;
+  GlobalLocaleGuard &operator=(const GlobalLocaleGuard &) = delete;
+
+private:
+  std::locale original_;
+};
+
+class FloatingPointEnvironmentGuard {
+public:
+  FloatingPointEnvironmentGuard() : saved_{}, valid_{std::fegetenv(&saved_) == 0} {}
+
+  ~FloatingPointEnvironmentGuard() {
+    if (valid_) {
+      static_cast<void>(std::fesetenv(&saved_));
+    }
+  }
+
+  FloatingPointEnvironmentGuard(const FloatingPointEnvironmentGuard &) = delete;
+  FloatingPointEnvironmentGuard &operator=(const FloatingPointEnvironmentGuard &) = delete;
+
+private:
+  std::fenv_t saved_;
+  bool valid_;
+};
+
+#if defined(__linux__) && defined(__GLIBC__)
+constexpr int kTrapSetupFailed = 1;
+constexpr int kTrapControlUnsupported = 77;
+
+constexpr int unavailable_trap_control_exit_code() {
+#if defined(__aarch64__)
+  return kTrapControlUnsupported;
+#else
+  return kTrapSetupFailed;
+#endif
+}
+#endif
 
 netft::DiscoveryOptions options_for(const FakeHttpServer &server) {
   netft::DiscoveryOptions options;
@@ -119,6 +173,16 @@ TEST(XmlConfiguration, ParsesTheRealSensorFixtureExactly) {
   EXPECT_EQ(result.revision, 1U);
 }
 
+TEST(XmlConfiguration, ParsesDecimalAndScientificCountsExactly) {
+  auto xml = replace_value(kValidXml, "cfgcpf", "1234.5");
+  xml = replace_value(xml, "cfgcpt", "2.5e6");
+
+  const auto result = netft::detail::parse_sensor_configuration(xml);
+
+  EXPECT_DOUBLE_EQ(result.calibration.counts_per_force_unit, 1234.5);
+  EXPECT_DOUBLE_EQ(result.calibration.counts_per_torque_unit, 2'500'000.0);
+}
+
 class RequiredXmlField : public ::testing::TestWithParam<const char *> {};
 
 TEST_P(RequiredXmlField, RejectsMissingFields) {
@@ -164,11 +228,128 @@ INSTANTIATE_TEST_SUITE_P(
     EveryInvalidForm, InvalidXmlCount,
     ::testing::Values(InvalidCountCase{"cfgcpf", "not-a-number"},
                       InvalidCountCase{"cfgcpf", "10remaining"}, InvalidCountCase{"cfgcpf", "0"},
-                      InvalidCountCase{"cfgcpf", "-1"}, InvalidCountCase{"cfgcpf", "NaN"},
-                      InvalidCountCase{"cfgcpf", "inf"}, InvalidCountCase{"cfgcpt", "not-a-number"},
+                      InvalidCountCase{"cfgcpf", "-1"}, InvalidCountCase{"cfgcpf", "+1"},
+                      InvalidCountCase{"cfgcpf", "NaN"}, InvalidCountCase{"cfgcpf", "inf"},
+                      InvalidCountCase{"cfgcpf", "1e9999"}, InvalidCountCase{"cfgcpf", "1e-9999"},
+                      InvalidCountCase{"cfgcpt", "not-a-number"},
                       InvalidCountCase{"cfgcpt", "10remaining"}, InvalidCountCase{"cfgcpt", "0"},
                       InvalidCountCase{"cfgcpt", "-1"}, InvalidCountCase{"cfgcpt", "NaN"},
                       InvalidCountCase{"cfgcpt", "infinity"}));
+
+TEST(XmlConfiguration, ParsesCountsIndependentlyOfTheGlobalLocale) {
+  const GlobalLocaleGuard locale_guard{std::locale{std::locale::classic(), new CommaDecimalPoint}};
+  const auto xml = replace_value(kValidXml, "cfgcpf", "1234.5");
+
+  const auto result = netft::detail::parse_sensor_configuration(xml);
+
+  EXPECT_DOUBLE_EQ(result.calibration.counts_per_force_unit, 1234.5);
+  EXPECT_THROW(
+      netft::detail::parse_sensor_configuration(replace_value(kValidXml, "cfgcpf", "1234,5")),
+      netft::DiscoveryError);
+}
+
+TEST(XmlConfiguration, UsesRoundToNearestAndRestoresTheCallersRoundingMode) {
+  const FloatingPointEnvironmentGuard restore_environment;
+  ASSERT_EQ(std::fesetround(FE_UPWARD), 0);
+  const auto xml =
+      replace_value(kValidXml, "cfgcpf", "1.00000000000000011102230246251565404236316680908203125");
+
+  const auto result = netft::detail::parse_sensor_configuration(xml);
+
+  EXPECT_EQ(result.calibration.counts_per_force_unit, 0x1p+0);
+  EXPECT_EQ(std::fegetround(), FE_UPWARD);
+}
+
+TEST(XmlConfiguration, RestoresTheCallersRoundingModeWhenParsingThrows) {
+  const FloatingPointEnvironmentGuard restore_environment;
+  ASSERT_EQ(std::fesetround(FE_UPWARD), 0);
+
+  EXPECT_THROW(
+      netft::detail::parse_sensor_configuration(replace_value(kValidXml, "cfgcpf", "invalid")),
+      netft::DiscoveryError);
+  EXPECT_EQ(std::fegetround(), FE_UPWARD);
+}
+
+struct FloatingPointEnvironmentCase {
+  int rounding_mode;
+  const char *value;
+  bool succeeds;
+};
+
+class FloatingPointEnvironment : public ::testing::TestWithParam<FloatingPointEnvironmentCase> {};
+
+TEST_P(FloatingPointEnvironment, PreservesTheCallersModeAndExceptionFlags) {
+  const FloatingPointEnvironmentGuard restore_environment;
+  ASSERT_EQ(std::feclearexcept(FE_ALL_EXCEPT), 0);
+  ASSERT_EQ(std::fesetround(GetParam().rounding_mode), 0);
+  ASSERT_EQ(std::feraiseexcept(FE_DIVBYZERO), 0);
+  const int expected_flags = std::fetestexcept(FE_ALL_EXCEPT);
+  const auto xml = replace_value(kValidXml, "cfgcpf", GetParam().value);
+
+  if (GetParam().succeeds) {
+    const auto result = netft::detail::parse_sensor_configuration(xml);
+    EXPECT_EQ(result.calibration.counts_per_force_unit, 0x1p+0);
+  } else {
+    EXPECT_THROW(netft::detail::parse_sensor_configuration(xml), netft::DiscoveryError);
+  }
+
+  EXPECT_EQ(std::fegetround(), GetParam().rounding_mode);
+  EXPECT_EQ(std::fetestexcept(FE_ALL_EXCEPT), expected_flags);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    EveryRoundingModeAndResult, FloatingPointEnvironment,
+    ::testing::Values(
+        FloatingPointEnvironmentCase{
+            FE_TONEAREST, "1.00000000000000011102230246251565404236316680908203125", true},
+        FloatingPointEnvironmentCase{FE_TONEAREST, "1e9999", false},
+        FloatingPointEnvironmentCase{FE_TONEAREST, "1e-9999", false},
+        FloatingPointEnvironmentCase{FE_TONEAREST, "+1", false},
+        FloatingPointEnvironmentCase{
+            FE_UPWARD, "1.00000000000000011102230246251565404236316680908203125", true},
+        FloatingPointEnvironmentCase{FE_UPWARD, "1e9999", false},
+        FloatingPointEnvironmentCase{FE_UPWARD, "1e-9999", false},
+        FloatingPointEnvironmentCase{FE_UPWARD, "+1", false}));
+
+#if defined(__linux__) && defined(__GLIBC__)
+TEST(FloatingPointTrapPlatformPolicy, TreatsUnavailableTrapControlAsAnErrorWhereItIsSupported) {
+#if defined(__aarch64__)
+  EXPECT_EQ(unavailable_trap_control_exit_code(), kTrapControlUnsupported);
+#else
+  EXPECT_EQ(unavailable_trap_control_exit_code(), kTrapSetupFailed);
+#endif
+}
+
+TEST(XmlConfiguration, MasksCallerOverflowTrapsWhileParsing) {
+  const pid_t child = fork();
+  ASSERT_NE(child, -1);
+  if (child == 0) {
+    if (std::feclearexcept(FE_ALL_EXCEPT) != 0) {
+      _exit(1);
+    }
+    if (feenableexcept(FE_OVERFLOW) == -1) {
+      _exit(unavailable_trap_control_exit_code());
+    }
+    try {
+      static_cast<void>(
+          netft::detail::parse_sensor_configuration(replace_value(kValidXml, "cfgcpf", "1e9999")));
+    } catch (const netft::DiscoveryError &) {
+      _exit((fegetexcept() & FE_OVERFLOW) != 0 ? 0 : 2);
+    } catch (...) {
+      _exit(3);
+    }
+    _exit(4);
+  }
+
+  int status{};
+  ASSERT_EQ(waitpid(child, &status, 0), child);
+  ASSERT_TRUE(WIFEXITED(status));
+  if (WEXITSTATUS(status) == kTrapControlUnsupported) {
+    GTEST_SKIP() << "floating-point trap control is unavailable on this platform";
+  }
+  EXPECT_EQ(WEXITSTATUS(status), 0);
+}
+#endif
 
 TEST(XmlConfiguration, TrimsAsciiWhitespaceAroundEveryValue) {
   auto xml = replace_value(kValidXml, "prodname", " \tEthernet Axia\r\n");
