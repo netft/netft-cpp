@@ -300,11 +300,15 @@ INSTANTIATE_TEST_SUITE_P(
 
 #if defined(__linux__) && defined(__GLIBC__)
 TEST(XmlConfiguration, MasksCallerOverflowTrapsWhileParsing) {
+  constexpr int kTrapControlUnsupported = 77;
   const pid_t child = fork();
   ASSERT_NE(child, -1);
   if (child == 0) {
-    if (std::feclearexcept(FE_ALL_EXCEPT) != 0 || feenableexcept(FE_OVERFLOW) == -1) {
+    if (std::feclearexcept(FE_ALL_EXCEPT) != 0) {
       _exit(1);
+    }
+    if (feenableexcept(FE_OVERFLOW) == -1) {
+      _exit(kTrapControlUnsupported);
     }
     try {
       static_cast<void>(
@@ -320,6 +324,9 @@ TEST(XmlConfiguration, MasksCallerOverflowTrapsWhileParsing) {
   int status{};
   ASSERT_EQ(waitpid(child, &status, 0), child);
   ASSERT_TRUE(WIFEXITED(status));
+  if (WEXITSTATUS(status) == kTrapControlUnsupported) {
+    GTEST_SKIP() << "floating-point trap control is unavailable on this platform";
+  }
   EXPECT_EQ(WEXITSTATUS(status), 0);
 }
 #endif
