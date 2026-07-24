@@ -19,7 +19,7 @@ configuration discovery, stream health reporting, and explicit recovery policies
 ## Supported platforms
 
 The supported platforms are 64-bit Linux on x86-64 and AArch64. Building requires a C++17
-compiler, CMake 3.16 or newer, POSIX threads, and libcurl 7.62 or newer. GoogleTest is required
+compiler, CMake 3.16 or newer, POSIX threads, and libcurl 7.63.0 or newer. GoogleTest is required
 only when `BUILD_TESTING=ON`. The checked-in Pixi environment supports both `linux-64` and
 `linux-aarch64` and provides the development toolchain.
 
