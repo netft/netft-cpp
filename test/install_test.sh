@@ -68,15 +68,15 @@ mkdir -p "$incompatible_consumer_source"
 printf '%s\n' \
   'cmake_minimum_required(VERSION 3.16)' \
   'project(netft_incompatible_consumer LANGUAGES CXX)' \
-  'find_package(netft 0.1 CONFIG REQUIRED)' \
+  'find_package(netft 0.1 CONFIG QUIET)' \
+  'if(netft_FOUND)' \
+  '  message(FATAL_ERROR "netft 0.2 package accepted incompatible 0.1 request")' \
+  'endif()' \
   >"$incompatible_consumer_source/CMakeLists.txt"
-if cmake -S "$incompatible_consumer_source" \
-    -B "$incompatible_consumer_build" -G Ninja \
-    "${cmake_compiler_args[@]}" \
-    -DCMAKE_PREFIX_PATH="$prefix"; then
-  echo "netft 0.2 package accepted incompatible 0.1 request" >&2
-  exit 1
-fi
+cmake -S "$incompatible_consumer_source" \
+  -B "$incompatible_consumer_build" -G Ninja \
+  "${cmake_compiler_args[@]}" \
+  -DCMAKE_PREFIX_PATH="$prefix"
 
 if find "$prefix" -name '*netft_cli_lib*' -print -quit | grep -q .; then
   echo "private netft_cli_lib was installed" >&2
