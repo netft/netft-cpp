@@ -163,6 +163,21 @@ last error, current calibration, rates, and sequence progress before deciding wh
 a new session. Callback exceptions are counted; they remain non-fatal under reconnect policy
 and become a callback fault under fail-stop policy.
 
+## Network security
+
+ATI Net F/T configuration discovery uses HTTP and RDT streaming uses UDP. These device protocols
+do not provide transport encryption, peer authentication, or message integrity through this
+library. Run the sensor and client on a trusted, isolated network segment; do not expose the
+sensor HTTP or RDT ports directly to the Internet or an untrusted shared network. Use firewall
+allowlists and an authenticated network boundary when traffic must cross an untrusted network.
+
+Automatic discovery values are not authenticated solely because they came from the configured
+sensor address. Verify the discovered calibration and units before enabling a controller. A
+complete manual calibration override avoids HTTP discovery when independently verified values
+are required, but it does not authenticate the UDP measurement stream. See
+[SECURITY.md](SECURITY.md) for the supported network model, deployment controls, and private
+vulnerability reporting.
+
 ## Hardware safety
 
 Force/torque data can feed motion, force-control, and protective-limit decisions. Treat the
