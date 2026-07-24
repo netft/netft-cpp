@@ -104,6 +104,19 @@ private:
   bool valid_;
 };
 
+#if defined(__linux__) && defined(__GLIBC__)
+constexpr int kTrapSetupFailed = 1;
+constexpr int kTrapControlUnsupported = 77;
+
+constexpr int unavailable_trap_control_exit_code() {
+#if defined(__aarch64__)
+  return kTrapControlUnsupported;
+#else
+  return kTrapSetupFailed;
+#endif
+}
+#endif
+
 netft::DiscoveryOptions options_for(const FakeHttpServer &server) {
   netft::DiscoveryOptions options;
   options.sensor_host = server.host();
@@ -299,8 +312,15 @@ INSTANTIATE_TEST_SUITE_P(
         FloatingPointEnvironmentCase{FE_UPWARD, "+1", false}));
 
 #if defined(__linux__) && defined(__GLIBC__)
+TEST(FloatingPointTrapPlatformPolicy, TreatsUnavailableTrapControlAsAnErrorWhereItIsSupported) {
+#if defined(__aarch64__)
+  EXPECT_EQ(unavailable_trap_control_exit_code(), kTrapControlUnsupported);
+#else
+  EXPECT_EQ(unavailable_trap_control_exit_code(), kTrapSetupFailed);
+#endif
+}
+
 TEST(XmlConfiguration, MasksCallerOverflowTrapsWhileParsing) {
-  constexpr int kTrapControlUnsupported = 77;
   const pid_t child = fork();
   ASSERT_NE(child, -1);
   if (child == 0) {
@@ -308,7 +328,7 @@ TEST(XmlConfiguration, MasksCallerOverflowTrapsWhileParsing) {
       _exit(1);
     }
     if (feenableexcept(FE_OVERFLOW) == -1) {
-      _exit(kTrapControlUnsupported);
+      _exit(unavailable_trap_control_exit_code());
     }
     try {
       static_cast<void>(
