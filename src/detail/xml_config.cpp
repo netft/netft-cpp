@@ -69,21 +69,20 @@ using RequiredFields = std::array<std::string, kRequiredTags.size()>;
 class ScopedRoundToNearest {
 public:
   ScopedRoundToNearest() {
+    if (std::feholdexcept(&environment_) != 0) {
+      throw DiscoveryError("failed to hold the floating-point environment");
+    }
+    active_ = true;
+
     const int rounding_mode = std::fegetround();
     if (rounding_mode == -1) {
+      restore_environment_or_terminate();
       throw DiscoveryError("failed to inspect the floating-point rounding mode");
     }
-    if (rounding_mode == FE_TONEAREST) {
-      return;
-    }
-    if (std::fegetenv(&environment_) != 0) {
-      throw DiscoveryError("failed to save the floating-point environment");
-    }
-    if (std::fesetround(FE_TONEAREST) != 0) {
+    if (rounding_mode != FE_TONEAREST && std::fesetround(FE_TONEAREST) != 0) {
       restore_environment_or_terminate();
       throw DiscoveryError("failed to select round-to-nearest floating-point parsing");
     }
-    active_ = true;
   }
 
   ~ScopedRoundToNearest() {
@@ -97,6 +96,7 @@ public:
 
 private:
   void restore_environment_or_terminate() noexcept {
+    active_ = false;
     if (std::fesetenv(&environment_) != 0) {
       std::terminate();
     }
