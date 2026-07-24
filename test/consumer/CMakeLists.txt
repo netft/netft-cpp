@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(netft_consumer LANGUAGES CXX)
 
-find_package(netft 0.1 CONFIG REQUIRED)
+find_package(netft 0.2 CONFIG REQUIRED)
 
 if(DEFINED NETFT_EXPECTED_INCLUDE_DIR)
   get_target_property(netft_include_dirs

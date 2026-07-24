@@ -32,6 +32,8 @@ trap cleanup EXIT
 package_build="$test_root/package-build"
 prefix="$test_root/prefix"
 consumer_build="$test_root/consumer-build"
+incompatible_consumer_source="$test_root/incompatible-consumer"
+incompatible_consumer_build="$test_root/incompatible-consumer-build"
 install_include_dir="netft-headers"
 
 cmake_compiler_args=()
@@ -61,6 +63,20 @@ find "$prefix/lib" -maxdepth 1 -name "$library_pattern" -print -quit \
 test -f "$prefix/lib/cmake/netft/netftConfig.cmake"
 test -f "$prefix/lib/cmake/netft/netftConfigVersion.cmake"
 test -f "$prefix/lib/cmake/netft/netftTargets.cmake"
+
+mkdir -p "$incompatible_consumer_source"
+printf '%s\n' \
+  'cmake_minimum_required(VERSION 3.16)' \
+  'project(netft_incompatible_consumer LANGUAGES CXX)' \
+  'find_package(netft 0.1 CONFIG REQUIRED)' \
+  >"$incompatible_consumer_source/CMakeLists.txt"
+if cmake -S "$incompatible_consumer_source" \
+    -B "$incompatible_consumer_build" -G Ninja \
+    "${cmake_compiler_args[@]}" \
+    -DCMAKE_PREFIX_PATH="$prefix"; then
+  echo "netft 0.2 package accepted incompatible 0.1 request" >&2
+  exit 1
+fi
 
 if find "$prefix" -name '*netft_cli_lib*' -print -quit | grep -q .; then
   echo "private netft_cli_lib was installed" >&2
@@ -150,7 +166,7 @@ if [[ "$mode" == "shared" ]]; then
     LD_LIBRARY_PATH="$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
       ldd "$prefix/bin/netft"
   )"
-  grep -Fq "$prefix/lib/libnetft.so.0" <<<"$cli_dependencies"
+  grep -Fq "$prefix/lib/libnetft.so.1" <<<"$cli_dependencies"
   if grep -Fq 'netft_cli_lib' <<<"$cli_dependencies"; then
     echo "$cli_dependencies" >&2
     exit 1
