@@ -29,6 +29,10 @@ pixi run coverage
 consumer. Run the complete relevant command set before opening a pull request. Keep
 `pixi.lock` synchronized with `pixi.toml` when dependency resolution actually changes it.
 
+The Pixi tasks are the primary Linux development path. Platform-specific transport changes
+must also pass the macOS or Windows CI job. Those jobs deliberately obtain curl and GoogleTest
+from Homebrew or vcpkg instead of embedding either dependency in the library.
+
 ## Test-driven changes
 
 Use a red-green-refactor workflow for code changes:
@@ -54,7 +58,8 @@ pixi run format
 
 Before submitting, run `pixi run format-check` and `pixi run tidy`. Avoid unrelated formatting
 or refactoring in a focused change. New code must remain C++17-compatible and preserve the
-public/private ABI boundary of the installed shared library.
+public/private ABI boundary of the installed shared library. Keep operating-system socket
+headers and implementation details out of the installed public headers.
 
 ## Hardware testing is opt-in
 

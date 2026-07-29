@@ -1,13 +1,8 @@
 #include "support/fake_http_server.hpp"
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#include "support/socket_runtime.hpp"
 
 #include <atomic>
 #include <condition_variable>
-#include <cstring>
 #include <mutex>
 #include <stdexcept>
 #include <string_view>
@@ -16,15 +11,25 @@
 
 namespace {
 
-void close_socket(int socket) noexcept {
-  if (socket >= 0) {
-    ::close(socket);
-  }
+using netft::test::NativeSocket;
+
+int wait_for_readable(const NativeSocket socket) noexcept {
+  fd_set readable;
+  FD_ZERO(&readable);
+  FD_SET(socket, &readable);
+  timeval timeout{};
+  timeout.tv_usec = 50'000;
+#ifdef _WIN32
+  return ::select(0, &readable, nullptr, nullptr, &timeout);
+#else
+  return ::select(socket + 1, &readable, nullptr, nullptr, &timeout);
+#endif
 }
 
-void send_all(int socket, std::string_view data) noexcept {
+void send_all(const NativeSocket socket, std::string_view data) noexcept {
   while (!data.empty()) {
-    const auto sent = ::send(socket, data.data(), data.size(), MSG_NOSIGNAL);
+    const auto sent = netft::test::send_socket(socket, data.data(), data.size(),
+                                               netft::test::socket_send_flags());
     if (sent <= 0) {
       return;
     }
@@ -37,31 +42,29 @@ void send_all(int socket, std::string_view data) noexcept {
 struct FakeHttpServer::Impl {
   explicit Impl(std::string initial_body, int initial_status)
       : body(std::move(initial_body)), status(initial_status) {
-    listener = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (listener < 0) {
+    listener = netft::test::create_socket(AF_INET, SOCK_STREAM, 0);
+    if (!netft::test::socket_is_valid(listener)) {
       throw std::runtime_error("failed to create fake HTTP server socket");
     }
 
-    const int reuse_address = 1;
-    ::setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &reuse_address, sizeof(reuse_address));
+    static_cast<void>(netft::test::set_socket_reuse_address(listener));
 
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     address.sin_port = 0;
-    if (::bind(listener, reinterpret_cast<const sockaddr *>(&address), sizeof(address)) != 0 ||
+    if (::bind(listener, reinterpret_cast<const sockaddr *>(&address),
+               static_cast<netft::test::SocketLength>(sizeof(address))) != 0 ||
         ::listen(listener, 8) != 0) {
-      const auto error = std::string{std::strerror(errno)};
-      close_socket(listener);
-      listener = -1;
+      const auto error = netft::test::socket_error_message("fake HTTP server bind failed");
+      netft::test::close_socket(listener);
       throw std::runtime_error("failed to bind fake HTTP server: " + error);
     }
 
-    socklen_t address_length = sizeof(address);
+    netft::test::SocketLength address_length = sizeof(address);
     if (::getsockname(listener, reinterpret_cast<sockaddr *>(&address), &address_length) != 0) {
-      const auto error = std::string{std::strerror(errno)};
-      close_socket(listener);
-      listener = -1;
+      const auto error = netft::test::socket_error_message("fake HTTP server getsockname failed");
+      netft::test::close_socket(listener);
       throw std::runtime_error("failed to inspect fake HTTP server: " + error);
     }
     listening_port = ntohs(address.sin_port);
@@ -71,45 +74,61 @@ struct FakeHttpServer::Impl {
   ~Impl() {
     stopping.store(true);
     response_changed.notify_all();
-    if (listener >= 0) {
-      ::shutdown(listener, SHUT_RDWR);
-      close_socket(listener);
+    if (netft::test::socket_is_valid(listener)) {
+      netft::test::shutdown_socket(listener);
+      auto listener_to_close = listener;
+      netft::test::close_socket(listener_to_close);
     }
-    const int client = active_client.exchange(-1);
-    if (client >= 0) {
-      ::shutdown(client, SHUT_RDWR);
+    {
+      std::lock_guard<std::mutex> lock(active_client_mutex);
+      netft::test::shutdown_socket(active_client);
     }
     if (worker.joinable()) {
       worker.join();
     }
+    listener = netft::test::kInvalidSocket;
   }
 
   void serve() noexcept {
     while (!stopping.load()) {
-      const int client = ::accept(listener, nullptr, nullptr);
-      if (client < 0) {
+      auto client = ::accept(listener, nullptr, nullptr);
+      if (!netft::test::socket_is_valid(client)) {
         if (stopping.load()) {
           return;
         }
         continue;
       }
-      active_client.store(client);
+      {
+        std::lock_guard<std::mutex> lock(active_client_mutex);
+        active_client = client;
+      }
       accepted_connections.fetch_add(1);
       if (stopping.load()) {
-        ::shutdown(client, SHUT_RDWR);
+        netft::test::shutdown_socket(client);
       }
       handle_request(client);
-      int expected_client = client;
-      static_cast<void>(active_client.compare_exchange_strong(expected_client, -1));
-      close_socket(client);
+      {
+        std::lock_guard<std::mutex> lock(active_client_mutex);
+        netft::test::close_socket(active_client);
+      }
     }
   }
 
-  void handle_request(int client) noexcept {
+  void handle_request(const NativeSocket client) noexcept {
     std::string request;
     char buffer[1024];
     while (request.size() < 8192 && request.find("\r\n\r\n") == std::string::npos) {
-      const auto received = ::recv(client, buffer, sizeof(buffer), 0);
+      if (stopping.load()) {
+        return;
+      }
+      const int readiness = wait_for_readable(client);
+      if (readiness < 0) {
+        return;
+      }
+      if (readiness == 0) {
+        continue;
+      }
+      const auto received = netft::test::receive_socket(client, buffer, sizeof(buffer));
       if (received <= 0) {
         return;
       }
@@ -161,8 +180,10 @@ struct FakeHttpServer::Impl {
   std::atomic<bool> stopping{false};
   std::atomic<std::uint64_t> requests{0};
   std::atomic<std::uint64_t> accepted_connections{0};
-  std::atomic<int> active_client{-1};
-  int listener{-1};
+  netft::test::SocketRuntime runtime;
+  std::mutex active_client_mutex;
+  NativeSocket active_client{netft::test::kInvalidSocket};
+  NativeSocket listener{netft::test::kInvalidSocket};
   int listening_port{};
   std::thread worker;
 };

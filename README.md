@@ -19,10 +19,16 @@ configuration discovery, stream health reporting, and explicit recovery policies
 
 ## Supported platforms
 
-The supported platforms are 64-bit Linux on x86-64 and AArch64. Building requires a C++17
-compiler, CMake 3.16 or newer, POSIX threads, and libcurl 7.63.0 or newer. GoogleTest is required
-only when `BUILD_TESTING=ON`. The checked-in Pixi environment supports both `linux-64` and
-`linux-aarch64` and provides the development toolchain.
+| Platform | Architectures | SDK | CLI |
+| --- | --- | --- | --- |
+| Linux | x86-64, AArch64 | Tested | Tested |
+| macOS | x86-64, Apple silicon | Tested | Tested |
+| Windows | x86-64 | Tested | Not currently supported |
+
+Building requires a C++17 compiler, CMake 3.16 or newer, threads, and libcurl 7.63.0 or newer.
+GoogleTest is required only when `BUILD_TESTING=ON`. The checked-in Pixi environment provides
+the reproducible Linux development toolchain; macOS and Windows builds use the same CMake
+project with externally supplied dependencies.
 
 ## Installation
 
@@ -43,8 +49,13 @@ pixi run cmake --install build/release
 
 Set `BUILD_SHARED_LIBS=OFF` for a static library. The same CMake commands work with system
 packages instead of Pixi when the required compiler, CMake, Threads, and libcurl dependencies
-are available. For a non-system shared-library prefix, configure the platform dynamic loader
-for `install/lib` before running `install/bin/netft`.
+are available. Homebrew can provide the macOS dependencies, while vcpkg can provide the Windows
+dependencies. Pass their installation prefixes or toolchain file to CMake as appropriate. For
+a non-system shared-library prefix, configure the platform dynamic loader for `install/lib`
+before running `install/bin/netft`.
+
+On Windows, configure with `-DNETFT_BUILD_CLI=OFF`. The SDK uses WinSock 2 and links `ws2_32`
+automatically; the current CLI still relies on POSIX file and process facilities.
 
 ## CMake usage
 

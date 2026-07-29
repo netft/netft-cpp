@@ -1,10 +1,12 @@
-#include <gtest/gtest.h>
+#include "support/socket_runtime.hpp"
 
-#include <arpa/inet.h>
 #include <fenv.h>
-#include <sys/socket.h>
+#if defined(__linux__) && defined(__GLIBC__)
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
+
+#include <gtest/gtest.h>
 
 #include <array>
 #include <cfenv>
@@ -595,15 +597,20 @@ TEST(SensorDiscovery, AcceptsRoundedMillisecondsAtOrBelowLongMax) {
 
 TEST(FakeHttpServerTest, DestructionInterruptsAnIncompleteAcceptedRequest) {
   auto server = std::make_unique<FakeHttpServer>(std::string{kValidXml});
-  const int client = ::socket(AF_INET, SOCK_STREAM, 0);
-  ASSERT_GE(client, 0);
+  netft::test::SocketRuntime runtime;
+  auto client = netft::test::create_socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_TRUE(netft::test::socket_is_valid(client));
 
   sockaddr_in address{};
   address.sin_family = AF_INET;
   address.sin_port = htons(static_cast<std::uint16_t>(server->port()));
   ASSERT_EQ(::inet_pton(AF_INET, server->host().c_str(), &address.sin_addr), 1);
-  ASSERT_EQ(::connect(client, reinterpret_cast<const sockaddr *>(&address), sizeof(address)), 0);
-  ASSERT_EQ(::send(client, "GET /netftapi2.xml", 19, MSG_NOSIGNAL), 19);
+  ASSERT_EQ(::connect(client, reinterpret_cast<const sockaddr *>(&address),
+                      static_cast<netft::test::SocketLength>(sizeof(address))),
+            0);
+  ASSERT_EQ(
+      netft::test::send_socket(client, "GET /netftapi2.xml", 19, netft::test::socket_send_flags()),
+      19);
 
   for (int attempt = 0; attempt < 100 && server->accepted_connection_count() == 0; ++attempt) {
     std::this_thread::sleep_for(std::chrono::milliseconds{1});
@@ -613,7 +620,7 @@ TEST(FakeHttpServerTest, DestructionInterruptsAnIncompleteAcceptedRequest) {
   const auto started = std::chrono::steady_clock::now();
   server.reset();
   EXPECT_LT(std::chrono::steady_clock::now() - started, std::chrono::milliseconds{500});
-  ::close(client);
+  netft::test::close_socket(client);
 }
 
 } // namespace

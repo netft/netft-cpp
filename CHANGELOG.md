@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+### Added
+
+- Support SDK streaming on macOS and Windows alongside Linux, with native POSIX and WinSock
+  backends and platform CI coverage. The CLI remains supported on Linux and macOS.
+
 ## 0.2.2 - 2026-07-25
 
 ### Fixed

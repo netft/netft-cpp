@@ -4,8 +4,8 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <memory>
 #include <mutex>
-#include <netinet/in.h>
 #include <string>
 #include <thread>
 #include <vector>
@@ -54,14 +54,15 @@ public:
   void set_http_response_delay(std::chrono::milliseconds delay);
 
 private:
+  struct NetworkState;
+
   void run();
   void send_next();
-  void record_command(const std::uint8_t *data, std::size_t size, const ::sockaddr_in &peer);
 
   std::string host_{"127.0.0.1"};
   FakeHttpServer http_;
   int rdt_port_{};
-  int socket_{-1};
+  std::unique_ptr<NetworkState> network_;
   double rate_hz_{};
   std::atomic<bool> stopping_{false};
   std::atomic<bool> enabled_{true};
@@ -71,7 +72,6 @@ private:
   std::vector<detail::Command> commands_;
   std::vector<CommandEvent> command_events_;
   std::vector<std::vector<std::uint8_t>> payloads_;
-  ::sockaddr_in client_{};
   bool has_client_{false};
   std::uint32_t rdt_{};
   std::uint32_t ft_{1000};
