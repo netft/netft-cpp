@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.16)
 
 project(netft_consumer LANGUAGES CXX)
 
-find_package(netft 0.2 CONFIG REQUIRED)
+if(NOT DEFINED NETFT_REQUIRED_VERSION OR NETFT_REQUIRED_VERSION STREQUAL "")
+  message(FATAL_ERROR "NETFT_REQUIRED_VERSION must be defined and nonempty")
+endif()
+
+find_package(netft ${NETFT_REQUIRED_VERSION} CONFIG REQUIRED)
 
 if(DEFINED NETFT_EXPECTED_INCLUDE_DIR)
   get_target_property(netft_include_dirs

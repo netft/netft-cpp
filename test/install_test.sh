@@ -35,6 +35,12 @@ consumer_build="$test_root/consumer-build"
 incompatible_consumer_source="$test_root/incompatible-consumer"
 incompatible_consumer_build="$test_root/incompatible-consumer-build"
 install_include_dir="netft-headers"
+project_version="$(
+  sed -nE \
+    's/^project\(netft VERSION ([0-9]+\.[0-9]+\.[0-9]+).*$/\1/p' \
+    "$repo_root/CMakeLists.txt"
+)"
+test -n "$project_version"
 
 cmake_compiler_args=()
 if [[ -n "${NETFT_CXX_COMPILER:-}" ]]; then
@@ -74,7 +80,7 @@ printf '%s\n' \
   'find_package(netft 0.1 CONFIG QUIET' \
   '  PATHS "${NETFT_PROBE_PREFIX}" NO_DEFAULT_PATH)' \
   'if(netft_FOUND)' \
-  '  message(FATAL_ERROR "netft 0.2 package accepted incompatible 0.1 request")' \
+  '  message(FATAL_ERROR "netft package accepted incompatible 0.1 request")' \
   'endif()' \
   >"$incompatible_consumer_source/CMakeLists.txt"
 cmake -S "$incompatible_consumer_source" \
@@ -161,6 +167,7 @@ cmake -S "$repo_root/test/consumer" -B "$consumer_build" -G Ninja \
   "${cmake_compiler_args[@]}" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="$prefix" \
+  -DNETFT_REQUIRED_VERSION="$project_version" \
   -DNETFT_EXPECTED_INCLUDE_DIR="$prefix/$install_include_dir"
 cmake --build "$consumer_build"
 "$consumer_build/netft_consumer"

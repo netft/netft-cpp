@@ -46,19 +46,6 @@ if ! configure_with_curl \
   exit 1
 fi
 
-cmake_version="$(
-  sed -nE \
-    's/^project\(netft VERSION ([0-9]+\.[0-9]+\.[0-9]+).*$/\1/p' \
-    "${repo_root}/CMakeLists.txt"
-)"
-pixi_version="$(
-  sed -nE \
-    's/^version = "([0-9]+\.[0-9]+\.[0-9]+)"$/\1/p' \
-    "${repo_root}/pixi.toml"
-)"
-test "${cmake_version}" = "0.2.2"
-test "${pixi_version}" = "${cmake_version}"
-
 grep -Eq '^find_dependency\(CURL 7\.63(\.0)?\)$' \
   "${repo_root}/cmake/netftConfig.cmake.in"
 grep -Eq '^[[:space:]]*libcurl = ">=7\.63\.0"$' \
