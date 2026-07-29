@@ -1,10 +1,11 @@
 # netft-cpp
 
-[![CI](https://github.com/netft/netft-cpp/actions/workflows/ci.yml/badge.svg)](https://github.com/netft/netft-cpp/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/netft/netft-cpp/actions/workflows/codeql.yml/badge.svg)](https://github.com/netft/netft-cpp/actions/workflows/codeql.yml)
-[![Coverage](https://codecov.io/gh/netft/netft-cpp/branch/main/graph/badge.svg)](https://codecov.io/gh/netft/netft-cpp)
-[![License](https://img.shields.io/github/license/netft/netft-cpp)](LICENSE)
-[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
+[![CI](https://github.com/netft/netft-cpp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/netft/netft-cpp/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/netft/netft-cpp/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/netft/netft-cpp/actions/workflows/codeql.yml)
+[![Coverage](https://codecov.io/gh/netft/netft-cpp/graph/badge.svg?branch=main)](https://codecov.io/gh/netft/netft-cpp)
+[![Release](https://img.shields.io/github/v/release/netft/netft-cpp?display_name=tag&sort=semver)](https://github.com/netft/netft-cpp/releases)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue)](https://en.cppreference.com/w/cpp/17)
+[![License](https://img.shields.io/github/license/netft/netft-cpp?label=license)](LICENSE)
 
 `netft-cpp` is a standalone C++17 SDK and command-line tool for receiving calibrated
 force/torque samples from ATI Net F/T Ethernet sensors over the RDT protocol, with HTTP
