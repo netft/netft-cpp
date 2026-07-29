@@ -146,7 +146,7 @@ target_link_libraries(netft_client_recovery PRIVATE
 
 add_test(NAME netft_client_recovery COMMAND netft_client_recovery)
 
-add_library(netft_client_impl_test STATIC
+add_library(netft_client_impl_test OBJECT
   ${CMAKE_CURRENT_SOURCE_DIR}/../src/detail/client_impl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../src/detail/fault_latch.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../src/detail/protocol.cpp
