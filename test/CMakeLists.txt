@@ -171,13 +171,14 @@ add_executable(netft_client_lifecycle
   test_client_lifecycle.cpp
   support/fake_http_server.cpp
   support/fake_sensor.cpp
+  $<TARGET_OBJECTS:netft_client_impl_test>
 )
 target_include_directories(netft_client_lifecycle PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 target_link_libraries(netft_client_lifecycle PRIVATE
-  netft_client_impl_test
+  netft::netft
   netft_test_socket
   ${NETFT_GTEST_MAIN_TARGET}
 )
