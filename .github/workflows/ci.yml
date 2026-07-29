@@ -177,14 +177,14 @@ jobs:
         shell: pwsh
         run: >-
           vcpkg install
-          curl:x64-windows-static
-          gtest:x64-windows-static
+          curl:x64-windows
+          gtest:x64-windows
       - name: Configure
         shell: pwsh
         run: >-
           cmake -S . -B build/windows
           "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          -DVCPKG_TARGET_TRIPLET=x64-windows
           -DBUILD_SHARED_LIBS=OFF
           -DNETFT_BUILD_CLI=OFF
           -DBUILD_TESTING=ON
@@ -200,7 +200,7 @@ jobs:
         run: |
           cmake -S test/consumer -B build/windows-consumer `
             "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
             "-DCMAKE_PREFIX_PATH=$env:RUNNER_TEMP/netft"
           cmake --build build/windows-consumer --config Release
           & build/windows-consumer/Release/netft_consumer.exe
