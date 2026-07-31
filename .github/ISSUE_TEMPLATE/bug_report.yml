@@ -1,5 +1,5 @@
 name: Bug report
-description: Report reproducible incorrect behavior in the SDK or CLI
+description: Report reproducible incorrect behavior in the C++ SDK
 title: "[Bug]: "
 labels:
   - bug
@@ -21,7 +21,6 @@ body:
       label: Component
       options:
         - C++ SDK
-        - CLI
         - Discovery and calibration
         - Build or packaging
         - Tests or automation

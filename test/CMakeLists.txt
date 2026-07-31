@@ -163,48 +163,6 @@ target_link_libraries(netft_client_lifecycle PRIVATE
 
 add_test(NAME netft_client_lifecycle COMMAND netft_client_lifecycle)
 
-if(NETFT_BUILD_CLI)
-  add_executable(netft_cli_test
-    test_cli.cpp
-    support/fake_http_server.cpp
-    support/fake_sensor.cpp
-  )
-  target_include_directories(netft_cli_test PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../app
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src
-  )
-  target_compile_definitions(netft_cli_test PRIVATE
-    NETFT_CLI_PATH="$<TARGET_FILE:netft_cli>"
-  )
-  target_link_libraries(netft_cli_test PRIVATE
-    netft_cli_lib
-    netft_test_socket
-    ${NETFT_GTEST_MAIN_TARGET}
-  )
-  add_dependencies(netft_cli_test netft_cli)
-
-  add_test(NAME netft_cli COMMAND netft_cli_test)
-
-  add_test(
-    NAME netft_cli_help
-    COMMAND ${CMAKE_COMMAND}
-      -DPROGRAM=$<TARGET_FILE:netft_cli>
-      -DEXPECTED_EXIT_CODE=0
-      -DARGUMENTS=--help
-      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_exit_code.cmake
-  )
-
-  add_test(
-    NAME netft_cli_invalid_command
-    COMMAND ${CMAKE_COMMAND}
-      -DPROGRAM=$<TARGET_FILE:netft_cli>
-      -DEXPECTED_EXIT_CODE=2
-      -DARGUMENTS=invalid-command
-      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_exit_code.cmake
-  )
-endif()
-
 if(UNIX)
   add_test(
     NAME netft_curl_minimum

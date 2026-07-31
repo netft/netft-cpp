@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+### Removed
+
+- Remove the legacy bundled CLI and its `NETFT_BUILD_CLI` option. Command-line workflows now
+  live in the independent [netft-cli](https://github.com/netft/netft-cli) project.
+
 ## 0.3.1 - 2026-07-31
 
 ### Fixed
