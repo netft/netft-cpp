@@ -7,23 +7,24 @@
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue)](https://en.cppreference.com/w/cpp/17)
 [![License](https://img.shields.io/github/license/netft/netft-cpp?label=license)](LICENSE)
 
-`netft-cpp` is a standalone C++17 SDK and command-line tool for receiving calibrated
-force/torque samples from ATI Net F/T Ethernet sensors over the RDT protocol, with HTTP
-configuration discovery, stream health reporting, and explicit recovery policies.
+`netft-cpp` is a standalone C++17 SDK for receiving calibrated force/torque samples from ATI
+Net F/T Ethernet sensors over the RDT protocol, with HTTP configuration discovery, stream
+health reporting, and explicit recovery policies. For an end-user command-line application,
+see [netft-cli](https://github.com/netft/netft-cli).
 
-## Highlights
+## Features
 
 - Discovers calibration scales and measurement units from the sensor before streaming.
 - Tracks sequence, status, delivery, and recovery health with reconnect and fail-stop policies.
-- Installs as the `netft::netft` CMake target and includes a human- and JSON-readable CLI.
+- Installs shared or static libraries as the `netft::netft` CMake target.
 
 ## Supported platforms
 
-| Platform | Architectures | SDK | CLI |
-| --- | --- | --- | --- |
-| Linux | x86-64, AArch64 | Tested | Tested |
-| macOS | x86-64, Apple silicon | Tested | Tested |
-| Windows | x86-64 | Tested | Not currently supported |
+| Platform | Architectures | Support |
+| --- | --- | --- |
+| Linux | x86-64, AArch64 | Tested |
+| macOS | x86-64, Apple silicon | Tested |
+| Windows | x86-64 | Tested |
 
 Building requires a C++17 compiler, CMake 3.16 or newer, threads, and libcurl 7.63.0 or newer.
 GoogleTest is required only when `BUILD_TESTING=ON`. The checked-in Pixi environment provides
@@ -32,37 +33,31 @@ project with externally supplied dependencies.
 
 ## Installation
 
-Pixi provides the reproducible development environment:
+Configure, build, and install the SDK with CMake:
 
 ```bash
 git clone https://github.com/netft/netft-cpp.git
 cd netft-cpp
-pixi install
-pixi run cmake -S . -B build/release -G Ninja \
+cmake -S . -B build/release \
   -DCMAKE_BUILD_TYPE=Release \
   -DBUILD_SHARED_LIBS=ON \
   -DBUILD_TESTING=OFF \
   -DCMAKE_INSTALL_PREFIX="$PWD/install"
-pixi run cmake --build build/release
-pixi run cmake --install build/release
+cmake --build build/release
+cmake --install build/release
 ```
 
-Set `BUILD_SHARED_LIBS=OFF` for a static library. The same CMake commands work with system
-packages instead of Pixi when the required compiler, CMake, Threads, and libcurl dependencies
-are available. Homebrew can provide the macOS dependencies, while vcpkg can provide the Windows
-dependencies. Pass their installation prefixes or toolchain file to CMake as appropriate. For
-a non-system shared-library prefix, configure the platform dynamic loader for `install/lib`
-before running `install/bin/netft`.
-
-On Windows, configure with `-DNETFT_BUILD_CLI=OFF`. The SDK uses WinSock 2 and links `ws2_32`
-automatically; the current CLI still relies on POSIX file and process facilities.
+Set `BUILD_SHARED_LIBS=OFF` for a static library. Homebrew can provide the macOS dependencies,
+while vcpkg can provide the Windows dependencies; pass their installation prefix or toolchain
+file to CMake as appropriate. The repository's Pixi environment and development tasks are
+documented in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## CMake usage
 
 After installation, consume the package with CMake config mode:
 
 ```cmake
-find_package(netft 0.1 CONFIG REQUIRED)
+find_package(netft 0.3 CONFIG REQUIRED)
 
 add_executable(read_sensor main.cpp)
 target_link_libraries(read_sensor PRIVATE netft::netft)
@@ -93,27 +88,6 @@ int main() {
 ```
 
 `192.168.1.1` is the ATI [factory-default sensor address](https://www.ati-ia.com/app_content/Documents/9620-05-Net%20FT.pdf). Replace it with the address configured for your sensor when it has been moved to another network.
-
-## CLI usage
-
-The installed `netft` executable provides three commands:
-
-```bash
-netft --help
-netft info --host 192.168.1.1
-netft monitor --host 192.168.1.1 --duration 10
-netft monitor --host 192.168.1.1 --duration 10 --json --output sample.json
-netft bias --host 192.168.1.1
-```
-
-`info` reads and prints sensor configuration without starting an RDT stream. `monitor` keeps
-the latest sample and reports a summary after five seconds by default. `bias` waits for a
-sample, applies software bias, and succeeds only after receiving a later sample. `--json`
-selects JSON output, while `--output PATH` replaces the output file atomically.
-
-CLI exit codes are `0` for success without reported device warnings or errors, `1` when a
-completed operation reports device warnings or errors, `2` for invalid usage or an operational
-failure, and `130` for interruption by `SIGINT`.
 
 ## Automatic discovery and units
 
@@ -200,7 +174,7 @@ sensor, network, application, controller, and independent safety system as one i
   any controller. Do not copy the example address or calibration into another installation.
 - Applying software bias changes the measurement zero and can change downstream control and
   limit behavior. Unload or fixture the sensor as required, stop hazardous motion, and keep
-  people clear before calling `Client::bias()` or running `netft bias`.
+  people clear before calling `Client::bias()`.
 - Test disconnects, stale data, device status errors, and the selected recovery policy under
   controlled conditions. This software is not a substitute for an emergency stop or a
   safety-rated control path.
@@ -208,38 +182,10 @@ sensor, network, application, controller, and independent safety system as one i
 Repository tests use simulated HTTP and UDP sensors. Connecting tests or examples to physical
 hardware is always an explicit, operator-approved action.
 
-### Opt-in hardware verification
-
-The hardware harness builds and installs a fresh Release CLI into a temporary prefix, checks
-the sensor-selected calibration returned by automatic discovery, and monitors a two-second
-stream without printing individual samples. It requires an explicit sensor host and does not
-assume a particular unit system or calibration scale:
-
-```bash
-NETFT_SENSOR_HOST=192.168.1.1 pixi run hardware-test
-```
-
-The default `hardware-test` task explicitly forces `NETFT_ALLOW_BIAS=0`, so an inherited shell
-setting cannot enable bias. Review the reported product, units, scales, rates, and counters
-against the intended installation before using the results.
-
-The bias variant must be treated as a separate physical operation. Before every individual
-run, obtain fresh operator authorization, verify that the named sensor is the intended device,
-unload or fixture it as required, stop hazardous motion, and keep people clear. Only after
-those checks may an operator deliberately run:
-
-```bash
-NETFT_SENSOR_HOST=192.168.1.1 pixi run hardware-bias-test
-```
-
-Authorization from an earlier run must not be reused. The bias task opts in by setting
-`NETFT_ALLOW_BIAS=1`; the harness then requires the CLI result to report
-`"bias_applied": true`.
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, tests, formatting rules,
-hardware-test policy, versioning, and `ros-netft` backports.
+hardware testing policy, versioning, and `ros-netft` backports.
 
 ## License
 

@@ -63,7 +63,7 @@ test -f "$prefix/$install_include_dir/netft/discovery.hpp"
 test -f "$prefix/$install_include_dir/netft/export.hpp"
 test -f "$prefix/$install_include_dir/netft/status.hpp"
 test -f "$prefix/$install_include_dir/netft/types.hpp"
-test -x "$prefix/bin/netft"
+test ! -e "$prefix/bin/netft"
 find "$prefix/lib" -maxdepth 1 -name "$library_pattern" -print -quit \
   | grep -q .
 test -f "$prefix/lib/cmake/netft/netftConfig.cmake"
@@ -88,19 +88,10 @@ cmake -S "$incompatible_consumer_source" \
   "${cmake_compiler_args[@]}" \
   -DNETFT_PROBE_PREFIX="$prefix"
 
-if find "$prefix" -name '*netft_cli_lib*' -print -quit | grep -q .; then
-  echo "private netft_cli_lib was installed" >&2
-  exit 1
-fi
-
 for targets_file in "$prefix"/lib/cmake/netft/netftTargets*.cmake; do
   if grep -Fq "$repo_root" "$targets_file" || \
       grep -Fq "$package_build" "$targets_file"; then
     echo "exported targets contain a source or build path: $targets_file" >&2
-    exit 1
-  fi
-  if grep -Fq 'netft_cli_lib' "$targets_file"; then
-    echo "exported targets reference private netft_cli_lib: $targets_file" >&2
     exit 1
   fi
 done
@@ -171,25 +162,5 @@ cmake -S "$repo_root/test/consumer" -B "$consumer_build" -G Ninja \
   -DNETFT_EXPECTED_INCLUDE_DIR="$prefix/$install_include_dir"
 cmake --build "$consumer_build"
 "$consumer_build/netft_consumer"
-
-if [[ "$mode" == "shared" ]]; then
-  cli_dependencies="$(
-    LD_LIBRARY_PATH="$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-      ldd "$prefix/bin/netft"
-  )"
-  grep -Fq "$prefix/lib/libnetft.so.1" <<<"$cli_dependencies"
-  if grep -Fq 'netft_cli_lib' <<<"$cli_dependencies"; then
-    echo "$cli_dependencies" >&2
-    exit 1
-  fi
-  if grep -Fq 'not found' <<<"$cli_dependencies"; then
-    echo "$cli_dependencies" >&2
-    exit 1
-  fi
-  LD_LIBRARY_PATH="$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-    "$prefix/bin/netft" --help >/dev/null
-else
-  "$prefix/bin/netft" --help >/dev/null
-fi
 
 echo "netft $mode install/consumer test passed"

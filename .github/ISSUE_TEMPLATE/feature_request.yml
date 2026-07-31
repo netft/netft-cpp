@@ -15,7 +15,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: Describe the API, CLI, or workflow you would expect.
+      description: Describe the API or integration workflow you would expect.
     validations:
       required: true
   - type: textarea

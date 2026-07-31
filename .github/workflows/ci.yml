@@ -186,7 +186,6 @@ jobs:
           "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows
           -DBUILD_SHARED_LIBS=OFF
-          -DNETFT_BUILD_CLI=OFF
           -DBUILD_TESTING=ON
       - name: Build
         run: cmake --build build/windows --config Release
