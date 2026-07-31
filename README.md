@@ -101,9 +101,10 @@ revision. The active configuration is also available through `Client::health()`.
 Sample values therefore use the units selected by the sensor; the library does not silently
 convert them to a preferred unit system. In particular, do not assume that an ATI sensor's
 native torque unit is `N-mm`: if the device configuration reports `N-m`, the sample torque is
-scaled and labeled as `N-m`. Check `netft info` or the sample unit fields before consuming the
-values. Reconnection performs discovery again when no override is active, and a changed
-calibration advances the configuration revision.
+scaled and labeled as `N-m`. Inspect the sample unit fields or
+`Client::health().sensor_configuration` before consuming the values. Reconnection performs
+discovery again when no override is active, and a changed calibration advances the
+configuration revision.
 
 ## Manual override
 
@@ -111,17 +112,7 @@ Use a manual override only when HTTP discovery is unavailable and the exact acti
 calibration is known. All four values are required together: counts per force unit, counts per
 torque unit, force unit, and torque unit. Partial overrides are rejected.
 
-```bash
-netft monitor --host 192.168.1.1 --duration 5 \
-  --counts-per-force-unit 1000000 \
-  --counts-per-torque-unit 1000 \
-  --force-unit N \
-  --torque-unit N-mm
-```
-
-The numbers and units above are illustrative and must be replaced with values from the sensor's
-active configuration. `info` always performs discovery and does not accept a manual override.
-In C++, assign a complete `netft::Calibration` to `Config::calibration_override`:
+Assign a complete `netft::Calibration` to `Config::calibration_override`:
 
 ```cpp
 config.calibration_override = netft::Calibration{
@@ -131,6 +122,9 @@ config.calibration_override = netft::Calibration{
     netft::TorqueUnit::NewtonMillimeter,
 };
 ```
+
+The numbers and units above are illustrative and must be replaced with values from the sensor's
+active configuration.
 
 Canonical override unit strings are `lbf`, `N`, `klbf`, `kN`, and `kgf` for force, and
 `lbf-in`, `lbf-ft`, `N-m`, `N-mm`, `kgf-cm`, and `kN-m` for torque.

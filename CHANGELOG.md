@@ -2,7 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
-## Unreleased
+## 0.3.2 - 2026-07-31
+
+### Fixed
+
+- Allow a client to be destroyed from its own sample callback without joining
+  or destroying a joinable worker thread on that callback.
 
 ### Removed
 

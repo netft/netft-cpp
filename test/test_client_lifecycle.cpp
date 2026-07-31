@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -707,6 +708,24 @@ TEST(ClientLifecycle, DestructionSendsStopStreaming) {
     client.start([](const netft::Sample &) {});
     ASSERT_TRUE(wait_until([&] { return client.health().received_count > 0; }));
   }
+  EXPECT_TRUE(sensor.wait_for_command(netft::detail::Command::StopStreaming));
+}
+
+TEST(ClientLifecycle, DestructionFromCallbackIsDeferredUntilWorkerExit) {
+  netft::test::FakeSensor sensor;
+  sensor.pause();
+  auto *client = new netft::Client{config_for(sensor)};
+  std::promise<void> destruction_returned;
+  auto returned = destruction_returned.get_future();
+
+  client->start([client, &destruction_returned](const netft::Sample &) {
+    delete client;
+    destruction_returned.set_value();
+  });
+  ASSERT_TRUE(sensor.wait_for_command(netft::detail::Command::StartRealtime));
+  sensor.send_record_now(1U, 0U, 100U);
+
+  ASSERT_EQ(returned.wait_for(1s), std::future_status::ready);
   EXPECT_TRUE(sensor.wait_for_command(netft::detail::Command::StopStreaming));
 }
 
