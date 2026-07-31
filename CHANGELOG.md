@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.1 - 2026-07-31
+
+### Fixed
+
+- Drop stalled and backward FT-sequence samples before latching a fail-stop fault, matching
+  the documented delivery contract and preventing consumers from observing stale measurements.
+
 ## 0.3.0 - 2026-07-29
 
 ### Added

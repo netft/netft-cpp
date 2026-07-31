@@ -208,7 +208,8 @@ TEST(ClientRecovery, FailStopMapsFtStallAndBackwardFaults) {
     auto config = config_for(sensor);
     config.recovery_policy = netft::RecoveryPolicy::FailStop;
     netft::Client client{config};
-    client.start([](const netft::Sample &) {});
+    std::atomic<unsigned> delivered{};
+    client.start([&](const netft::Sample &) { ++delivered; });
     ASSERT_TRUE(sensor.wait_for_command(netft::detail::Command::StartRealtime));
 
     sensor.queue_record(1, 0, 100);
@@ -217,6 +218,8 @@ TEST(ClientRecovery, FailStopMapsFtStallAndBackwardFaults) {
 
     ASSERT_TRUE(wait_until([&] { return client.faulted(); }));
     EXPECT_EQ(client.fault_code(), test_case.second);
+    EXPECT_EQ(delivered.load(), 1U);
+    EXPECT_EQ(client.health().delivered_count, 1U);
     EXPECT_EQ(client.health().reconnect_count, 0U);
     client.stop();
   }
