@@ -96,6 +96,24 @@ struct ClientLifecycleTestAccess {
 
   static bool worker_exited(const netft::Client &client) { return client.impl_->worker_exited_; }
 
+  static bool current_thread_is_active_without_thread_handle(netft::Client &client) {
+    {
+      std::scoped_lock lifecycle_lock(client.impl_->lifecycle_mutex_);
+      if (client.impl_->worker_.joinable()) {
+        return false;
+      }
+      client.impl_->worker_exited_ = false;
+      client.impl_->active_worker_id_ = std::this_thread::get_id();
+    }
+    const bool active = client.impl_->called_from_worker_thread();
+    {
+      std::scoped_lock lifecycle_lock(client.impl_->lifecycle_mutex_);
+      client.impl_->worker_exited_ = true;
+      client.impl_->active_worker_id_ = {};
+    }
+    return active;
+  }
+
   static bool has_callback(const netft::Client &client) {
     return static_cast<bool>(client.impl_->callback_);
   }
@@ -384,6 +402,13 @@ TEST(ClientLifecycle, CallbackStopReturnsAndExternalStopReapsWorker) {
   ASSERT_TRUE(client.wait_for_first_sample(500ms));
   client.stop();
   EXPECT_FALSE(ClientLifecycleTestAccess::worker_joinable(client));
+}
+
+TEST(ClientLifecycle, ActiveWorkerRemainsRecognizedAfterThreadHandleMoves) {
+  netft::test::FakeSensor sensor;
+  netft::Client client{config_for(sensor)};
+
+  EXPECT_TRUE(ClientLifecycleTestAccess::current_thread_is_active_without_thread_handle(client));
 }
 
 TEST(ClientLifecycle, CallbackStartAndConcurrentStopDoNotDeadlock) {

@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.3 - 2026-08-01
+
+### Fixed
+
+- Keep callback-triggered deferred destruction safe while another thread is joining the worker.
+- Keep the deferred-destruction service alive for the process lifetime to avoid shutdown races.
+
 ## 0.3.2 - 2026-07-31
 
 ### Fixed
