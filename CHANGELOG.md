@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+- Reject durations and deadlines outside the steady-clock/HTTP timer range before conversion; document synchronous resolver shutdown limits.
+
 ### Fixed
 
 - Reject calibration divisors that cannot represent the full signed raw-count range,

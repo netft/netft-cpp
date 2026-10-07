@@ -335,3 +335,29 @@ TEST(States, ConvertsStateAndFaultCodeStrings) {
     EXPECT_EQ(netft::to_string(code), spelling);
   }
 }
+
+TEST(Config, RejectsFiniteDurationsOutsideClockRange) {
+  for (int field = 0; field < 5; ++field) {
+    netft::Config config;
+    const std::chrono::duration<double> extreme{1e300};
+    switch (field) {
+    case 0:
+      config.receive_timeout = extreme;
+      break;
+    case 1:
+      config.configuration_connect_timeout = extreme;
+      break;
+    case 2:
+      config.configuration_timeout = extreme;
+      break;
+    case 3:
+      config.reconnect_initial_delay = extreme;
+      config.reconnect_max_delay = extreme;
+      break;
+    case 4:
+      config.reconnect_max_delay = extreme;
+      break;
+    }
+    EXPECT_THROW(netft::validate(config), std::invalid_argument);
+  }
+}

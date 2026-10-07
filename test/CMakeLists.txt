@@ -86,6 +86,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
   )
   target_link_options(netft_posix_transport PRIVATE
+    "-Wl,--wrap=getaddrinfo"
     "-Wl,--wrap=poll"
     "-Wl,--wrap=recv"
     "-Wl,--wrap=send"

@@ -105,3 +105,9 @@ security issues through [SECURITY.md](SECURITY.md).
 ## License
 
 This project is licensed under the [Apache License 2.0](LICENSE).
+
+### Timing limits (unreleased candidate)
+
+Configuration durations must be finite, positive and representable by the steady clock; HTTP timers must also fit libcurl milliseconds. `wait_for_first_sample` accepts a zero-duration poll and rejects negative, non-finite or nonrepresentable waits. Deadlines are checked before integer conversion or addition.
+
+UDP hostname resolution uses synchronous system `getaddrinfo`. Its DNS/NSS latency cannot be cancelled by `stop()`, and libcurl discovery cancellation also depends on the resolver backend. Receive/configuration timeouts do not provide a hard bound for every hostname resolution or callback. Use a numeric device address on the isolated sensor network when a predictable shutdown bound is required; keep callbacks bounded. The SDK does not create detached resolver threads or promise a hard realtime stop.

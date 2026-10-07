@@ -755,3 +755,12 @@ TEST(ClientLifecycle, DestructionFromCallbackIsDeferredUntilWorkerExit) {
 }
 
 } // namespace
+
+TEST(ClientLifecycle, RejectsNonRepresentableFirstSampleWaitBeforeStarting) {
+  netft::Client client{netft::Config{}};
+  EXPECT_THROW(client.wait_for_first_sample(std::chrono::duration<double>{1e300}),
+               std::invalid_argument);
+  EXPECT_THROW(client.wait_for_first_sample(std::chrono::duration<double>{-1}),
+               std::invalid_argument);
+  EXPECT_FALSE(client.wait_for_first_sample(std::chrono::duration<double>{0}));
+}
