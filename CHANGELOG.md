@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+### Fixed
+
+- Reject calibration divisors that cannot represent the full signed raw-count range,
+  consistently for HTTP discovery and manual overrides. Never deliver non-finite axes
+  as successful samples; numeric conversion failures use the sensor-configuration fault.
+
 ## 0.3.3 - 2026-08-01
 
 ### Fixed

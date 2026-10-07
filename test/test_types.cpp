@@ -10,6 +10,18 @@
 
 #include "netft/types.hpp"
 
+TEST(Calibration, RejectsScalesThatOverflowRawRange) {
+  netft::Calibration calibration{1.0, 1.0, netft::ForceUnit::Newton,
+                                 netft::TorqueUnit::NewtonMeter};
+  calibration.counts_per_force_unit = 1e-300;
+  EXPECT_THROW(netft::validate(calibration), std::invalid_argument);
+  calibration.counts_per_force_unit = 1.0;
+  calibration.counts_per_torque_unit = 1e-300;
+  EXPECT_THROW(netft::validate(calibration), std::invalid_argument);
+  calibration.counts_per_torque_unit = 1e-298;
+  EXPECT_NO_THROW(netft::validate(calibration));
+}
+
 TEST(Config, DefaultsToAutomaticSensorDiscovery) {
   const netft::Config config;
   EXPECT_EQ(config.sensor_host, "192.168.1.1");

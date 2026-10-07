@@ -4,8 +4,10 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <exception>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -157,6 +159,31 @@ TEST(ClientStream, CompleteCalibrationOverrideSkipsHttpDiscovery) {
   ASSERT_TRUE(health.sensor_configuration);
   EXPECT_EQ(health.sensor_configuration->source, netft::CalibrationSource::Override);
   EXPECT_EQ(health.sensor_configuration->calibration.force_unit, netft::ForceUnit::PoundForce);
+  client.stop();
+}
+
+TEST(ClientStream, DeliversFiniteAxesForExtremeRawCounts) {
+  netft::test::FakeSensor sensor;
+  sensor.pause();
+  const auto low = std::numeric_limits<std::int32_t>::min();
+  const auto high = std::numeric_limits<std::int32_t>::max();
+  const std::array<std::int32_t, 6> axes{low, high, low, high, low, high};
+  sensor.queue_record(1, 0, 100, axes);
+  auto config = config_for(sensor);
+  config.calibration_override =
+      netft::Calibration{1e-298, 1e-298, netft::ForceUnit::Newton, netft::TorqueUnit::NewtonMeter};
+  netft::Client client{config};
+  client.start([&](const netft::Sample &) { sensor.pause(); });
+  ASSERT_TRUE(sensor.wait_for_command(netft::detail::Command::StartRealtime));
+  sensor.resume();
+  ASSERT_TRUE(client.wait_for_first_sample(500ms));
+  const auto sample = client.latest_sample();
+  ASSERT_TRUE(sample);
+  EXPECT_EQ(sample->raw_wrench, axes);
+  for (const auto value : sample->force)
+    EXPECT_TRUE(std::isfinite(value));
+  for (const auto value : sample->torque)
+    EXPECT_TRUE(std::isfinite(value));
   client.stop();
 }
 
