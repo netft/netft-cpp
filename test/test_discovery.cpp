@@ -236,7 +236,8 @@ INSTANTIATE_TEST_SUITE_P(
                       InvalidCountCase{"cfgcpt", "not-a-number"},
                       InvalidCountCase{"cfgcpt", "10remaining"}, InvalidCountCase{"cfgcpt", "0"},
                       InvalidCountCase{"cfgcpt", "-1"}, InvalidCountCase{"cfgcpt", "NaN"},
-                      InvalidCountCase{"cfgcpt", "infinity"}));
+                      InvalidCountCase{"cfgcpt", "infinity"}, InvalidCountCase{"cfgcpf", "1e-300"},
+                      InvalidCountCase{"cfgcpt", "1e-300"}));
 
 TEST(XmlConfiguration, ParsesCountsIndependentlyOfTheGlobalLocale) {
   const GlobalLocaleGuard locale_guard{std::locale{std::locale::classic(), new CommaDecimalPoint}};

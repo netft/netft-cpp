@@ -519,6 +519,8 @@ TEST(ClientRecovery, InvalidReplacementConfigurationCannotStartNewRdtSession) {
            "<netft>",
            R"xml(<netft><prodname>Fake</prodname><cfgcpf>1000000</cfgcpf>
 <cfgcpt>1000</cfgcpt><scfgfu>N</scfgfu><scfgtu>mystery</scfgtu></netft>)xml",
+           R"xml(<netft><prodname>Fake</prodname><cfgcpf>1e-300</cfgcpf>
+<cfgcpt>1000</cfgcpt><scfgfu>N</scfgfu><scfgtu>Nm</scfgtu></netft>)xml",
        }) {
     netft::test::FakeSensor sensor{200.0};
     auto config = config_for(sensor);

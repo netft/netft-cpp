@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+## 0.3.4 - 2026-10-08
+
+- Reject durations and deadlines outside the steady-clock/HTTP timer range before conversion; document synchronous resolver shutdown limits.
+
+### Fixed
+
+- Reject calibration divisors that cannot represent the full signed raw-count range,
+  consistently for HTTP discovery and manual overrides. Never deliver non-finite axes
+  as successful samples; numeric conversion failures use the sensor-configuration fault.
+
 ## 0.3.3 - 2026-08-01
 
 ### Fixed

@@ -10,6 +10,18 @@
 
 #include "netft/types.hpp"
 
+TEST(Calibration, RejectsScalesThatOverflowRawRange) {
+  netft::Calibration calibration{1.0, 1.0, netft::ForceUnit::Newton,
+                                 netft::TorqueUnit::NewtonMeter};
+  calibration.counts_per_force_unit = 1e-300;
+  EXPECT_THROW(netft::validate(calibration), std::invalid_argument);
+  calibration.counts_per_force_unit = 1.0;
+  calibration.counts_per_torque_unit = 1e-300;
+  EXPECT_THROW(netft::validate(calibration), std::invalid_argument);
+  calibration.counts_per_torque_unit = 1e-298;
+  EXPECT_NO_THROW(netft::validate(calibration));
+}
+
 TEST(Config, DefaultsToAutomaticSensorDiscovery) {
   const netft::Config config;
   EXPECT_EQ(config.sensor_host, "192.168.1.1");
@@ -321,5 +333,31 @@ TEST(States, ConvertsStateAndFaultCodeStrings) {
   };
   for (const auto &[code, spelling] : fault_cases) {
     EXPECT_EQ(netft::to_string(code), spelling);
+  }
+}
+
+TEST(Config, RejectsFiniteDurationsOutsideClockRange) {
+  for (int field = 0; field < 5; ++field) {
+    netft::Config config;
+    const std::chrono::duration<double> extreme{1e300};
+    switch (field) {
+    case 0:
+      config.receive_timeout = extreme;
+      break;
+    case 1:
+      config.configuration_connect_timeout = extreme;
+      break;
+    case 2:
+      config.configuration_timeout = extreme;
+      break;
+    case 3:
+      config.reconnect_initial_delay = extreme;
+      config.reconnect_max_delay = extreme;
+      break;
+    case 4:
+      config.reconnect_max_delay = extreme;
+      break;
+    }
+    EXPECT_THROW(netft::validate(config), std::invalid_argument);
   }
 }
