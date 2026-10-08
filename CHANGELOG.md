@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.3.4 - 2026-10-08
+
 - Reject durations and deadlines outside the steady-clock/HTTP timer range before conversion; document synchronous resolver shutdown limits.
 
 ### Fixed

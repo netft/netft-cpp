@@ -106,7 +106,7 @@ security issues through [SECURITY.md](SECURITY.md).
 
 This project is licensed under the [Apache License 2.0](LICENSE).
 
-### Timing limits (unreleased candidate)
+### Timing limits (0.3.4)
 
 Configuration durations must be finite, positive and representable by the steady clock; HTTP timers must also fit libcurl milliseconds. `wait_for_first_sample` accepts a zero-duration poll and rejects negative, non-finite or nonrepresentable waits. Deadlines are checked before integer conversion or addition.
 
