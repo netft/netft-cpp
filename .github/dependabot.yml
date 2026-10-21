@@ -1,7 +1,8 @@
+# Disable routine version-update PRs without changing security update or alert settings.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
