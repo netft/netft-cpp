@@ -162,6 +162,36 @@ TEST(ClientStream, CompleteCalibrationOverrideSkipsHttpDiscovery) {
   client.stop();
 }
 
+TEST(ClientStream, MissingProductNameDoesNotBlockCalibratedStreaming) {
+  netft::test::FakeSensor sensor;
+  sensor.pause();
+  sensor.set_xml_configuration("<netft><cfgcpf>100</cfgcpf><cfgcpt>10</cfgcpt>"
+                               "<scfgfu>N</scfgfu><scfgtu>Nmm</scfgtu></netft>");
+  sensor.queue_record(1, 0, 100, {100, -200, 300, 10, -20, 30});
+  netft::Client client{config_for(sensor)};
+  client.start([&](const netft::Sample &) { sensor.pause(); });
+
+  ASSERT_TRUE(sensor.wait_for_command(netft::detail::Command::StartRealtime));
+  sensor.resume();
+  ASSERT_TRUE(client.wait_for_first_sample(500ms));
+  client.stop();
+
+  const auto sample = client.latest_sample();
+  ASSERT_TRUE(sample);
+  EXPECT_EQ(sample->force, (std::array<double, 3>{1.0, -2.0, 3.0}));
+  EXPECT_EQ(sample->torque, (std::array<double, 3>{1.0, -2.0, 3.0}));
+  EXPECT_EQ(sample->force_unit, netft::ForceUnit::Newton);
+  EXPECT_EQ(sample->torque_unit, netft::TorqueUnit::NewtonMillimeter);
+  const auto health = client.health();
+  ASSERT_TRUE(health.sensor_configuration);
+  EXPECT_EQ(health.sensor_configuration->product_name, "ATI Net F/T");
+  EXPECT_EQ(health.sensor_configuration->source, netft::CalibrationSource::Sensor);
+  EXPECT_EQ(sensor.http_request_count(), 1U);
+  const auto commands = sensor.commands();
+  EXPECT_EQ(std::count(commands.begin(), commands.end(), netft::detail::Command::SetSoftwareBias),
+            0);
+}
+
 TEST(ClientStream, DeliversFiniteAxesForExtremeRawCounts) {
   netft::test::FakeSensor sensor;
   sensor.pause();

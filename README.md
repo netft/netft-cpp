@@ -20,6 +20,12 @@ recovery. For an end-user terminal application, see
 - Supports reconnect and fail-stop recovery policies.
 - Installs shared or static libraries as the `netft::netft` CMake target.
 
+Legacy firmware may omit the display-only product name during configuration
+discovery. SDK 0.3.5 and later use `ATI Net F/T` as a generic label in that case;
+the label does not identify the connected sensor model. Calibration scales and
+units must still be complete and valid. A present but empty, duplicate or
+overlong product name is rejected.
+
 ## Installation
 
 | Platform | Architectures | Support |
