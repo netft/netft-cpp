@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+## 0.3.5 - 2026-10-27
+
+### Fixed
+
+- Allow legacy firmware to omit the display-only `prodname` field during sensor
+  discovery. Use `ATI Net F/T` as a generic name while preserving the reported
+  calibration scales and units. Empty, duplicate or overlong names and missing or
+  invalid calibration fields remain errors. Based on the compatibility fix by
+  Inigo Moreno in [ros-netft #20](https://github.com/netft/ros-netft/pull/20).
+
 ## 0.3.4 - 2026-10-08
 
 - Reject durations and deadlines outside the steady-clock/HTTP timer range before conversion; document synchronous resolver shutdown limits.

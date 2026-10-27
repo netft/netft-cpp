@@ -185,31 +185,56 @@ TEST(XmlConfiguration, ParsesDecimalAndScientificCountsExactly) {
   EXPECT_DOUBLE_EQ(result.calibration.counts_per_torque_unit, 2'500'000.0);
 }
 
-class RequiredXmlField : public ::testing::TestWithParam<const char *> {};
+TEST(XmlConfiguration, DefaultsMissingProductNameWithoutChangingCalibration) {
+  const auto named = netft::detail::parse_sensor_configuration(kValidXml);
+  const auto unnamed =
+      netft::detail::parse_sensor_configuration(remove_element(kValidXml, "prodname"));
 
-TEST_P(RequiredXmlField, RejectsMissingFields) {
-  EXPECT_THROW(netft::detail::parse_sensor_configuration(remove_element(kValidXml, GetParam())),
-               netft::DiscoveryError);
+  EXPECT_EQ(unnamed.product_name, "ATI Net F/T");
+  EXPECT_DOUBLE_EQ(unnamed.calibration.counts_per_force_unit,
+                   named.calibration.counts_per_force_unit);
+  EXPECT_DOUBLE_EQ(unnamed.calibration.counts_per_torque_unit,
+                   named.calibration.counts_per_torque_unit);
+  EXPECT_EQ(unnamed.calibration.force_unit, named.calibration.force_unit);
+  EXPECT_EQ(unnamed.calibration.torque_unit, named.calibration.torque_unit);
+  EXPECT_EQ(unnamed.source, named.source);
+  EXPECT_EQ(unnamed.revision, named.revision);
 }
 
-TEST_P(RequiredXmlField, RejectsDuplicateFields) {
+class RequiredCalibrationField : public ::testing::TestWithParam<const char *> {};
+
+TEST_P(RequiredCalibrationField, RejectsMissingFields) {
+  const auto missing_calibration = remove_element(kValidXml, GetParam());
+  EXPECT_THROW(netft::detail::parse_sensor_configuration(missing_calibration),
+               netft::DiscoveryError);
+  EXPECT_THROW(
+      netft::detail::parse_sensor_configuration(remove_element(missing_calibration, "prodname")),
+      netft::DiscoveryError);
+}
+
+INSTANTIATE_TEST_SUITE_P(EveryCalibrationField, RequiredCalibrationField,
+                         ::testing::Values("cfgcpf", "cfgcpt", "scfgfu", "scfgtu"));
+
+class XmlField : public ::testing::TestWithParam<const char *> {};
+
+TEST_P(XmlField, RejectsDuplicateFields) {
   EXPECT_THROW(netft::detail::parse_sensor_configuration(duplicate_element(kValidXml, GetParam())),
                netft::DiscoveryError);
 }
 
-TEST_P(RequiredXmlField, RejectsEmptyFields) {
+TEST_P(XmlField, RejectsEmptyFields) {
   EXPECT_THROW(
       netft::detail::parse_sensor_configuration(replace_value(kValidXml, GetParam(), " \t\r\n")),
       netft::DiscoveryError);
 }
 
-TEST_P(RequiredXmlField, RejectsFieldsLongerThan128Bytes) {
+TEST_P(XmlField, RejectsFieldsLongerThan128Bytes) {
   EXPECT_THROW(netft::detail::parse_sensor_configuration(
                    replace_value(kValidXml, GetParam(), std::string(129, '1'))),
                netft::DiscoveryError);
 }
 
-INSTANTIATE_TEST_SUITE_P(EveryField, RequiredXmlField,
+INSTANTIATE_TEST_SUITE_P(EveryField, XmlField,
                          ::testing::Values("prodname", "cfgcpf", "cfgcpt", "scfgfu", "scfgtu"));
 
 struct InvalidCountCase {
@@ -424,8 +449,8 @@ TEST(XmlConfiguration, IgnoresRequiredElementTextInsideComments) {
 }
 
 TEST(XmlConfiguration, RejectsAFieldThatAppearsOnlyInsideAComment) {
-  const auto xml = insert_after_root_open(remove_element(kValidXml, "prodname"),
-                                          "<!-- <prodname>Fake Sensor</prodname> -->");
+  const auto xml = insert_after_root_open(remove_element(kValidXml, "cfgcpf"),
+                                          "<!-- <cfgcpf>1000000</cfgcpf> -->");
 
   EXPECT_THROW(netft::detail::parse_sensor_configuration(xml), netft::DiscoveryError);
 }
@@ -440,10 +465,19 @@ TEST(XmlConfiguration, IgnoresRequiredElementTextInsideCdata) {
 }
 
 TEST(XmlConfiguration, RejectsAFieldThatAppearsOnlyInsideCdata) {
-  const auto xml = insert_after_root_open(remove_element(kValidXml, "prodname"),
-                                          "<![CDATA[<prodname>Fake Sensor</prodname>]]>");
+  const auto xml = insert_after_root_open(remove_element(kValidXml, "cfgcpf"),
+                                          "<![CDATA[<cfgcpf>1000000</cfgcpf>]]>");
 
   EXPECT_THROW(netft::detail::parse_sensor_configuration(xml), netft::DiscoveryError);
+}
+
+TEST(XmlConfiguration, IgnoresProductNamesThatAppearOnlyInsideCommentsOrCdata) {
+  for (const auto markup : {"<!-- <prodname>Fake Sensor</prodname> -->",
+                            "<![CDATA[<prodname>Fake Sensor</prodname>]]>"}) {
+    const auto xml = insert_after_root_open(remove_element(kValidXml, "prodname"), markup);
+    const auto result = netft::detail::parse_sensor_configuration(xml);
+    EXPECT_EQ(result.product_name, "ATI Net F/T");
+  }
 }
 
 TEST(XmlConfiguration, RejectsUnterminatedCommentsAndCdata) {
